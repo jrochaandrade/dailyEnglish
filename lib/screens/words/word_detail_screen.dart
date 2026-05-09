@@ -172,11 +172,17 @@ class WordDetailScreen extends ConsumerWidget {
                             status: s,
                             updatedAt: DateTime.now(),
                           );
-                          await ref.read(wordListProvider.notifier).updateWord(updated);
-                          ref.invalidate(wordDetailProvider(wordId));
-                          if (context.mounted) {
+                          try {
+                            await ref.read(wordListProvider.notifier).updateWord(updated);
+                            ref.invalidate(wordDetailProvider(wordId));
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Status atualizado!')),
+                            );
+                          } catch (_) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Erro ao atualizar o status.')),
                             );
                           }
                         },
@@ -241,12 +247,18 @@ class WordDetailScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(wordListProvider.notifier).deleteWord(wordId);
-              if (context.mounted) {
+              try {
+                await ref.read(wordListProvider.notifier).deleteWord(wordId);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Palavra removida.')),
                 );
                 context.go('/words');
+              } catch (_) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Erro ao remover a palavra.')),
+                );
               }
             },
             child: const Text('Remover', style: TextStyle(color: AppTheme.error)),
