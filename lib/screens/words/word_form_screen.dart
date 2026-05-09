@@ -53,27 +53,46 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
     _oppositeCtrl = TextEditingController();
 
     if (_isEditing) {
+      _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadWord());
     }
   }
 
   Future<void> _loadWord() async {
-    final word = await ref.read(wordDetailProvider(widget.wordId!).future);
-    if (word == null || !mounted) return;
-    setState(() {
-      _wordCtrl.text = word.word;
-      _translationCtrl.text = word.translation;
-      _meaningCtrl.text = word.meaning ?? '';
-      _example1Ctrl.text = word.example1 ?? '';
-      _example2Ctrl.text = word.example2 ?? '';
-      _example3Ctrl.text = word.example3 ?? '';
-      _synonymsCtrl.text = word.synonyms ?? '';
-      _oppositeCtrl.text = word.opposite ?? '';
-      _selectedCategory = word.category;
-      _difficulty = word.difficulty;
-      _status = word.status;
-      _originalCreatedAt = word.createdAt;
-    });
+    try {
+      final word = await ref.read(wordDetailProvider(widget.wordId!).future);
+      if (word == null || !mounted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Palavra não encontrada.'),
+          ));
+          context.go('/words');
+        }
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _wordCtrl.text = word.word;
+        _translationCtrl.text = word.translation;
+        _meaningCtrl.text = word.meaning ?? '';
+        _example1Ctrl.text = word.example1 ?? '';
+        _example2Ctrl.text = word.example2 ?? '';
+        _example3Ctrl.text = word.example3 ?? '';
+        _synonymsCtrl.text = word.synonyms ?? '';
+        _oppositeCtrl.text = word.opposite ?? '';
+        _selectedCategory = word.category;
+        _difficulty = word.difficulty;
+        _status = word.status;
+        _originalCreatedAt = word.createdAt;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Erro ao carregar a palavra.'),
+      ));
+      context.go('/words');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -116,19 +135,27 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
       updatedAt: now,
     );
 
-    if (_isEditing) {
-      await ref.read(wordListProvider.notifier).updateWord(word);
-    } else {
-      await ref.read(wordListProvider.notifier).addWord(word);
+    try {
+      if (_isEditing) {
+        await ref.read(wordListProvider.notifier).updateWord(word);
+      } else {
+        await ref.read(wordListProvider.notifier).addWord(word);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_isEditing ? 'Palavra atualizada com sucesso!' : 'Palavra salva com sucesso!'),
+        backgroundColor: AppTheme.primary,
+      ));
+      context.go('/words');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Erro ao salvar a palavra. Tente novamente.'),
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(_isEditing ? 'Palavra atualizada com sucesso!' : 'Palavra salva com sucesso!'),
-      backgroundColor: AppTheme.primary,
-    ));
-    context.go('/words');
   }
 
   @override
