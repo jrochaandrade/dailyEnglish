@@ -69,6 +69,32 @@ class Word {
     };
   }
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Word &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          word == other.word &&
+          translation == other.translation &&
+          meaning == other.meaning &&
+          example1 == other.example1 &&
+          example2 == other.example2 &&
+          example3 == other.example3 &&
+          synonyms == other.synonyms &&
+          opposite == other.opposite &&
+          category == other.category &&
+          difficulty == other.difficulty &&
+          status == other.status &&
+          createdAt == other.createdAt &&
+          updatedAt == other.updatedAt;
+
+  @override
+  int get hashCode => Object.hashAll([
+        id, word, translation, meaning, example1, example2, example3,
+        synonyms, opposite, category, difficulty, status, createdAt, updatedAt,
+      ]);
+
   Word copyWith({
     int? id,
     String? word,
