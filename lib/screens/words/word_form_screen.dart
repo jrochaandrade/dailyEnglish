@@ -151,7 +151,7 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Erro ao salvar a palavra. Tente novamente.'),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.error,
       ));
     } finally {
       if (mounted) setState(() => _isLoading = false);
