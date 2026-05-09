@@ -6,6 +6,12 @@ import '../../providers/word_provider.dart';
 import '../../models/word.dart';
 import '../../core/theme/app_theme.dart';
 
+Color _wordStatusColor(String s) =>
+    s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
+
+String _wordStatusLabel(String s) =>
+    s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
+
 const _wordCategories = [
   'Work', 'Travel', 'Family', 'Daily Routine', 'Technology',
   'IELTS', 'Verbs', 'Adjectives', 'Useful Phrases',
@@ -25,6 +31,14 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
   final _searchController = TextEditingController();
   String? _selectedCategory;
   String? _selectedStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(wordListProvider.notifier).setFilter();
+    });
+  }
 
   @override
   void dispose() {
@@ -67,7 +81,7 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Words'),
-        leading: BackButton(onPressed: () => context.go('/')),
+        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/')),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.go('/words/new'),
@@ -97,10 +111,10 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
                 ..._wordStatuses.map((s) => Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: Text(_statusLabel(s)),
+                    label: Text(_wordStatusLabel(s)),
                     selected: _selectedStatus == s,
                     onSelected: (_) => _onStatusTap(s),
-                    selectedColor: _statusColor(s).withValues(alpha: 0.2),
+                    selectedColor: _wordStatusColor(s).withValues(alpha: 0.2),
                   ),
                 )),
                 ..._wordCategories.map((c) => Padding(
@@ -125,7 +139,7 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
                       itemBuilder: (_, i) => _WordCard(word: words[i]),
                     ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Erro: $e')),
+              error: (e, _) => const Center(child: Text('Erro ao carregar palavras.')),
             ),
           ),
         ],
@@ -133,23 +147,15 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
     );
   }
 
-  String _statusLabel(String s) =>
-      s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
-
-  Color _statusColor(String s) =>
-      s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
 }
 
 class _WordCard extends StatelessWidget {
   final Word word;
   const _WordCard({required this.word});
 
-  Color _statusColor(String s) =>
-      s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
-
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(word.status);
+    final color = _wordStatusColor(word.status);
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
