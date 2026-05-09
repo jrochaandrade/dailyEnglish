@@ -36,6 +36,7 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(wordListProvider.notifier).setSearch('');
       ref.read(wordListProvider.notifier).setFilter();
     });
   }
@@ -178,7 +179,7 @@ class _WordCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            word.status[0].toUpperCase() + word.status.substring(1),
+            _wordStatusLabel(word.status),
             style: GoogleFonts.nunito(
               fontSize: 12,
               fontWeight: FontWeight.w700,
