@@ -55,7 +55,7 @@ String? _pickTargetWord(String sentence, math.Random rng) {
   return stripped.isEmpty ? null : stripped;
 }
 
-Future<List<GameItem>> loadGameItems(GameSource source, Ref ref) async {
+Future<List<GameItem>> loadGameItems(GameSource source, WidgetRef ref) async {
   switch (source) {
     case GameSource.words:
       final words = await ref.read(wordRepositoryProvider).getAll();
