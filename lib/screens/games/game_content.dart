@@ -38,7 +38,7 @@ const _kStopWords = {
 
 List<String> _extractSentences(String text) {
   return text
-      .split(RegExp(r'(?<=[.!?])\s+'))
+      .split(RegExp(r'(?<=[.!?])\s+|\n+'))
       .map((s) => s.trim().replaceAll(RegExp(r'[.!?]+$'), '').trim())
       .where((s) => s.split(RegExp(r'\s+')).length >= 3)
       .toList();
@@ -51,7 +51,8 @@ String? _pickTargetWord(String sentence, math.Random rng) {
   }).toList();
   if (candidates.isEmpty) return null;
   final token = candidates[rng.nextInt(candidates.length)];
-  return token.replaceAll(RegExp(r"^[^a-zA-Z]+|[^a-zA-Z]+$"), '');
+  final stripped = token.replaceAll(RegExp(r"^[^a-zA-Z]+|[^a-zA-Z]+$"), '');
+  return stripped.isEmpty ? null : stripped;
 }
 
 Future<List<GameItem>> loadGameItems(GameSource source, Ref ref) async {
@@ -102,15 +103,16 @@ Future<List<GameItem>> loadGameItems(GameSource source, Ref ref) async {
       final rng = math.Random();
       final entries = await ref.read(diaryRepositoryProvider).getAll();
       final items = <GameItem>[];
-      int autoId = 0;
       for (final entry in entries) {
         if (entry.correctedContent == null) continue;
         final sentences = _extractSentences(entry.correctedContent!);
-        for (final sentence in sentences) {
+        for (int sentIdx = 0; sentIdx < sentences.length; sentIdx++) {
+          final sentence = sentences[sentIdx];
           final targetWord = _pickTargetWord(sentence, rng);
           if (targetWord == null) continue;
+          // Diary items have no Portuguese translation; games must check source == GameSource.diary
           items.add(GameItem(
-            id: autoId++,
+            id: (entry.id ?? 0) * 10000 + sentIdx,
             term: targetWord,
             translation: '',
             examples: [sentence],
