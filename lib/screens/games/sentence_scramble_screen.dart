@@ -74,7 +74,8 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
       final sentence = validExamples[rng.nextInt(validExamples.length)];
       final tokens = sentence.trim().split(' ');
       final shuffled = [...tokens]..shuffle(rng);
-      while (_joinNorm(shuffled) == _joinNorm(tokens) && tokens.length > 1) {
+      final uniqueTokens = tokens.toSet();
+      while (_joinNorm(shuffled) == _joinNorm(tokens) && tokens.length > 1 && uniqueTokens.length > 1) {
         shuffled.shuffle(rng);
       }
       selected.add(_ScrambleRound(original: sentence.trim(), shuffled: shuffled));
