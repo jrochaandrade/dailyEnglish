@@ -105,6 +105,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
   Future<void> _next() async {
     if (_current + 1 >= _rounds.length) {
       final xp = _score * 10;
+      setState(() => _phase = _Phase.loading);
       await ref.read(playerStatsProvider.notifier).recordSession('multiple_choice', xp);
       if (!mounted) return;
       setState(() { _phase = _Phase.results; });

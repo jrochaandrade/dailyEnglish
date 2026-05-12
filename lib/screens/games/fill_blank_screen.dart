@@ -51,7 +51,8 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen> {
     final qualifying = allItems.where((item) =>
         item.examples.any((ex) => ex.toLowerCase().contains(item.term.toLowerCase()))).toList();
 
-    if (qualifying.length < 4) {
+    final uniqueTerms = qualifying.map((i) => i.term.toLowerCase()).toSet();
+    if (qualifying.length < 4 || uniqueTerms.length < 4) {
       setState(() {
         _errorMessage = 'Not enough ${gameSourceLabel(widget.source)} with matching examples. Add more content.';
         _phase = _FIBPhase.playing;
@@ -99,6 +100,7 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen> {
 
   Future<void> _next() async {
     if (_current + 1 >= _rounds.length) {
+      setState(() => _phase = _FIBPhase.loading);
       await ref.read(playerStatsProvider.notifier).recordSession('fill_blank', _score * 10);
       if (!mounted) return;
       setState(() => _phase = _FIBPhase.results);
