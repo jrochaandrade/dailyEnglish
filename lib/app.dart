@@ -10,6 +10,8 @@ class DailyEnglishApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Daily English',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );

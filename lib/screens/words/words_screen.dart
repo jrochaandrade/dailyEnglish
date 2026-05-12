@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/word_provider.dart';
+import '../../providers/category_provider.dart';
 import '../../models/word.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -12,14 +13,6 @@ Color _wordStatusColor(String s) =>
 String _wordStatusLabel(String s) =>
     s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
 
-const _wordCategories = [
-  'Work', 'Travel', 'Family', 'Daily Routine', 'Technology',
-  'IELTS', 'Verbs', 'Adjectives', 'Useful Phrases',
-  'Environmental Police', 'Immigration', 'Conversation',
-];
-
-const _wordStatuses = ['learning', 'learned', 'difficult'];
-
 class WordsScreen extends ConsumerStatefulWidget {
   const WordsScreen({super.key});
 
@@ -27,14 +20,15 @@ class WordsScreen extends ConsumerStatefulWidget {
   ConsumerState<WordsScreen> createState() => _WordsScreenState();
 }
 
-class _WordsScreenState extends ConsumerState<WordsScreen> {
+class _WordsScreenState extends ConsumerState<WordsScreen> with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   String? _selectedCategory;
-  String? _selectedStatus;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(wordListProvider.notifier).setSearch('');
       ref.read(wordListProvider.notifier).setFilter();
@@ -44,6 +38,7 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -51,7 +46,6 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
     ref.read(wordListProvider.notifier).setSearch(query);
     setState(() {
       _selectedCategory = null;
-      _selectedStatus = null;
     });
   }
 
@@ -59,20 +53,9 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
     final next = _selectedCategory == category ? null : category;
     setState(() {
       _selectedCategory = next;
-      _selectedStatus = null;
       _searchController.clear();
     });
     ref.read(wordListProvider.notifier).setFilter(category: next);
-  }
-
-  void _onStatusTap(String status) {
-    final next = _selectedStatus == status ? null : status;
-    setState(() {
-      _selectedStatus = next;
-      _selectedCategory = null;
-      _searchController.clear();
-    });
-    ref.read(wordListProvider.notifier).setFilter(status: next);
   }
 
   @override
@@ -83,9 +66,19 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
       appBar: AppBar(
         title: const Text('My Words'),
         leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/')),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Learning'),
+            Tab(text: 'Learned'),
+          ],
+          labelColor: AppTheme.primary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+          indicatorColor: AppTheme.primary,
+        ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/words/new'),
+        onPressed: () => context.push('/words/new'),
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -97,7 +90,7 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: const InputDecoration(
-                hintText: 'Search words...',
+                hintText: 'Search in English or Portuguese...',
                 prefixIcon: Icon(Icons.search_rounded),
               ),
             ),
@@ -109,21 +102,26 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                ..._wordStatuses.map((s) => Padding(
+                Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: Text(_wordStatusLabel(s)),
-                    selected: _selectedStatus == s,
-                    onSelected: (_) => _onStatusTap(s),
-                    selectedColor: _wordStatusColor(s).withValues(alpha: 0.2),
+                    label: const Text('All'),
+                    selected: _selectedCategory == null,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedCategory = null;
+                        _searchController.clear();
+                      });
+                      ref.read(wordListProvider.notifier).setFilter();
+                    },
                   ),
-                )),
-                ..._wordCategories.map((c) => Padding(
+                ),
+                ...(ref.watch(categoryListProvider).valueOrNull ?? []).map((cat) => Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: Text(c),
-                    selected: _selectedCategory == c,
-                    onSelected: (_) => _onCategoryTap(c),
+                    label: Text(cat.name),
+                    selected: _selectedCategory == cat.name,
+                    onSelected: (_) => _onCategoryTap(cat.name),
                   ),
                 )),
               ],
@@ -131,16 +129,12 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
           ),
           const SizedBox(height: 4),
           Expanded(
-            child: wordsAsync.when(
-              data: (words) => words.isEmpty
-                  ? _EmptyState(onAdd: () => context.go('/words/new'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: words.length,
-                      itemBuilder: (_, i) => _WordCard(word: words[i]),
-                    ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => const Center(child: Text('Erro ao carregar palavras.')),
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildList(wordsAsync, false),
+                _buildList(wordsAsync, true),
+              ],
             ),
           ),
         ],
@@ -148,6 +142,23 @@ class _WordsScreenState extends ConsumerState<WordsScreen> {
     );
   }
 
+  Widget _buildList(AsyncValue<List<Word>> wordsAsync, bool showLearned) {
+    return wordsAsync.when(
+      data: (allWords) {
+        final words = allWords.where((w) => showLearned ? w.status == 'learned' : w.status != 'learned').toList();
+        if (words.isEmpty) {
+          return _EmptyState(onAdd: () => context.push('/words/new'));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 80),
+          itemCount: words.length,
+          itemBuilder: (_, i) => _WordCard(word: words[i]),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const Center(child: Text('Erro ao carregar palavras.')),
+    );
+  }
 }
 
 class _WordCard extends StatelessWidget {
@@ -165,12 +176,12 @@ class _WordCard extends StatelessWidget {
           style: GoogleFonts.nunito(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           word.translation,
-          style: GoogleFonts.nunito(fontSize: 14, color: AppTheme.textSecondary),
+          style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -187,7 +198,7 @@ class _WordCard extends StatelessWidget {
             ),
           ),
         ),
-        onTap: () => context.go('/words/${word.id}'),
+        onTap: () => context.push('/words/${word.id}'),
       ),
     );
   }
@@ -210,13 +221,13 @@ class _EmptyState extends StatelessWidget {
             style: GoogleFonts.nunito(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Add your first word!',
-            style: GoogleFonts.nunito(fontSize: 14, color: AppTheme.textSecondary),
+            style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(

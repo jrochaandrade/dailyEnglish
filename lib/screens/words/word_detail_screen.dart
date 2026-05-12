@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/word_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/tappable_text.dart';
+import '../../core/services/audio_service.dart';
 
 class WordDetailScreen extends ConsumerWidget {
   final int wordId;
@@ -27,7 +29,13 @@ class WordDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Word Details'),
-        leading: BackButton(onPressed: () => context.go('/words')),
+        leading: BackButton(onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/words');
+          }
+        }),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_rounded),
@@ -58,9 +66,15 @@ class WordDetailScreen extends ConsumerWidget {
                               style: GoogleFonts.nunito(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
-                                color: AppTheme.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.volume_up_rounded),
+                            color: AppTheme.secondary,
+                            tooltip: 'Ouvir pronúncia',
+                            onPressed: () => ref.read(audioServiceProvider).speak(word.word),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -80,21 +94,54 @@ class WordDetailScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        word.translation,
-                        style: GoogleFonts.nunito(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
+                      ...[word.translation, word.translation2, word.translation3]
+                          .whereType<String>()
+                          .toList()
+                          .asMap()
+                          .entries
+                          .map((e) => Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  e.key == 0 && word.translation2 == null && word.translation3 == null
+                                      ? e.value
+                                      : '${e.key + 1}. ${e.value}',
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              )),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              if (word.meaning != null) ...[
-                _InfoCard(title: 'Meaning', child: Text(word.meaning!, style: _bodyStyle)),
+              if (word.meaning != null || word.meaningPt != null) ...[
+                _InfoCard(
+                  title: 'Meaning',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (word.meaning != null) Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: TappableText(text: word.meaning!, style: _bodyStyle(context))),
+                          IconButton(
+                            icon: const Icon(Icons.volume_up_rounded, size: 18),
+                            color: AppTheme.secondary,
+                            padding: const EdgeInsets.only(left: 4),
+                            constraints: const BoxConstraints(),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => ref.read(audioServiceProvider).speak(word.meaning!),
+                          ),
+                        ],
+                      ),
+                      if (word.meaning != null && word.meaningPt != null) const SizedBox(height: 8),
+                      if (word.meaningPt != null) Text(word.meaningPt!, style: _bodyStyle(context).copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
               ],
               if ([word.example1, word.example2, word.example3].any((e) => e != null)) ...[
@@ -102,40 +149,25 @@ class WordDetailScreen extends ConsumerWidget {
                   title: 'Examples',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [word.example1, word.example2, word.example3]
-                        .whereType<String>()
-                        .toList()
-                        .asMap()
-                        .entries
-                        .map((e) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${e.key + 1}. ',
-                                      style: GoogleFonts.nunito(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppTheme.secondary)),
-                                  Expanded(child: Text(e.value, style: _bodyStyle)),
-                                ],
-                              ),
-                            ))
-                        .toList(),
+                    children: [
+                      if (word.example1 != null) _ExampleItem(number: 1, text: word.example1!, translation: word.exampleTranslation1, style: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(word.example1!)),
+                      if (word.example2 != null) _ExampleItem(number: 2, text: word.example2!, translation: word.exampleTranslation2, style: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(word.example2!)),
+                      if (word.example3 != null) _ExampleItem(number: 3, text: word.example3!, translation: word.exampleTranslation3, style: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(word.example3!)),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
               ],
               if (word.synonyms != null) ...[
-                _InfoCard(title: 'Synonyms', child: Text(word.synonyms!, style: _bodyStyle)),
+                _InfoCard(title: 'Synonyms', child: TappableText(text: word.synonyms!, style: _bodyStyle(context))),
                 const SizedBox(height: 12),
               ],
               if (word.opposite != null) ...[
-                _InfoCard(title: 'Opposite', child: Text(word.opposite!, style: _bodyStyle)),
+                _InfoCard(title: 'Opposite', child: TappableText(text: word.opposite!, style: _bodyStyle(context))),
                 const SizedBox(height: 12),
               ],
               if (word.category != null) ...[
-                _InfoCard(title: 'Category', child: Text(word.category!, style: _bodyStyle)),
+                _InfoCard(title: 'Category', child: Text(word.category!, style: _bodyStyle(context))),
                 const SizedBox(height: 12),
               ],
               _InfoCard(
@@ -201,7 +233,7 @@ class WordDetailScreen extends ConsumerWidget {
                             style: GoogleFonts.nunito(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: selected ? color : AppTheme.textSecondary,
+                              color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -230,8 +262,8 @@ class WordDetailScreen extends ConsumerWidget {
     );
   }
 
-  TextStyle get _bodyStyle =>
-      GoogleFonts.nunito(fontSize: 15, color: AppTheme.textPrimary);
+  TextStyle _bodyStyle(BuildContext context) =>
+      GoogleFonts.nunito(fontSize: 15, color: Theme.of(context).colorScheme.onSurface);
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -253,7 +285,11 @@ class WordDetailScreen extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Palavra removida.')),
                 );
-                context.go('/words');
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/words');
+                }
               } catch (_) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -287,7 +323,7 @@ class _InfoCard extends StatelessWidget {
               style: GoogleFonts.nunito(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: AppTheme.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 letterSpacing: 1.2,
               ),
             ),
@@ -295,6 +331,72 @@ class _InfoCard extends StatelessWidget {
             child,
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExampleItem extends StatelessWidget {
+  final int number;
+  final String text;
+  final String? translation;
+  final TextStyle style;
+  final VoidCallback? onSpeak;
+
+  const _ExampleItem({
+    required this.number,
+    required this.text,
+    this.translation,
+    required this.style,
+    this.onSpeak,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$number. ',
+              style: GoogleFonts.nunito(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.secondary)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: TappableText(text: text, style: style)),
+                    if (onSpeak != null)
+                      IconButton(
+                        icon: const Icon(Icons.volume_up_rounded, size: 18),
+                        color: AppTheme.secondary,
+                        padding: const EdgeInsets.only(left: 4),
+                        constraints: const BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onSpeak,
+                      ),
+                  ],
+                ),
+                if (translation != null && translation!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    translation!,
+                    style: style.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -19,6 +19,7 @@ import '../../screens/games/games_screen.dart';
 import '../../screens/games/multiple_choice_screen.dart';
 import '../../screens/games/fill_blank_screen.dart';
 import '../../screens/games/sentence_scramble_screen.dart';
+import '../../screens/games/english_quest_screen.dart';
 import '../../screens/games/game_content.dart';
 
 final appRouter = GoRouter(
@@ -161,6 +162,10 @@ final appRouter = GoRouter(
         );
         return SentenceScrambleScreen(source: source);
       },
+    ),
+    GoRoute(
+      path: '/games/quest',
+      builder: (context, state) => const EnglishQuestScreen(),
     ),
   ],
 );

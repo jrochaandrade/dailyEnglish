@@ -19,7 +19,7 @@ class AppDatabase {
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
-    return openDatabase(path, version: 12, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path, version: 13, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -58,6 +58,7 @@ class AppDatabase {
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         corrected_content TEXT,
+        comments TEXT,
         mood TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -272,6 +273,9 @@ class AppDatabase {
           'streak_at_risk': 0, 'games_played_today': '',
         });
       } catch (_) {}
+    }
+    if (oldVersion < 13) {
+      try { await db.execute('ALTER TABLE diary_entries ADD COLUMN comments TEXT'); } catch (_) {}
     }
   }
 }

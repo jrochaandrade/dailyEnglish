@@ -34,6 +34,9 @@ class WordListNotifier extends AsyncNotifier<List<Word>> {
   Future<void> updateWord(Word word) async {
     await ref.read(wordRepositoryProvider).update(word);
     ref.invalidateSelf();
+    if (word.id != null) {
+      ref.invalidate(wordDetailProvider(word.id!));
+    }
   }
 
   Future<void> deleteWord(int id) async {
@@ -61,4 +64,17 @@ final wordListProvider =
 
 final wordDetailProvider = FutureProvider.family<Word?, int>((ref, id) {
   return ref.watch(wordRepositoryProvider).getById(id);
+});
+
+final dueWordsCountProvider = FutureProvider<int>((ref) async {
+  ref.watch(wordListProvider);
+  final due = await ref.read(wordRepositoryProvider).getDueWords();
+  return due.length;
+});
+
+// Always returns the total word count, ignoring any active filters.
+final totalWordCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  ref.watch(wordListProvider); // re-run on any word mutation
+  final all = await ref.read(wordRepositoryProvider).getAll();
+  return all.length;
 });

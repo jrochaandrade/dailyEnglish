@@ -8,7 +8,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(flutter test *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git ls-tree *)",
+      "WebFetch(domain:example.com)",
+      "WebSearch",
+      "WebFetch(domain:)"
     ]
   }
 }

@@ -1,20 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/word.dart';
 import '../../providers/word_provider.dart';
+import '../../providers/category_provider.dart';
 import '../../core/theme/app_theme.dart';
-
-const _wordCategories = [
-  'Work', 'Travel', 'Family', 'Daily Routine', 'Technology',
-  'IELTS', 'Verbs', 'Adjectives', 'Useful Phrases',
-  'Environmental Police', 'Immigration', 'Conversation',
-];
 
 class WordFormScreen extends ConsumerStatefulWidget {
   final int? wordId;
-  const WordFormScreen({super.key, this.wordId});
+  final String? initialWord;
+  const WordFormScreen({super.key, this.wordId, this.initialWord});
 
   @override
   ConsumerState<WordFormScreen> createState() => _WordFormScreenState();
@@ -27,10 +25,16 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
 
   late final TextEditingController _wordCtrl;
   late final TextEditingController _translationCtrl;
+  late final TextEditingController _translation2Ctrl;
+  late final TextEditingController _translation3Ctrl;
   late final TextEditingController _meaningCtrl;
+  late final TextEditingController _meaningPtCtrl;
   late final TextEditingController _example1Ctrl;
+  late final TextEditingController _exampleTranslation1Ctrl;
   late final TextEditingController _example2Ctrl;
+  late final TextEditingController _exampleTranslation2Ctrl;
   late final TextEditingController _example3Ctrl;
+  late final TextEditingController _exampleTranslation3Ctrl;
   late final TextEditingController _synonymsCtrl;
   late final TextEditingController _oppositeCtrl;
 
@@ -38,24 +42,52 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
   int _difficulty = 1;
   String _status = 'learning';
   DateTime? _originalCreatedAt;
+  Word? _duplicateWord;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     _isEditing = widget.wordId != null;
-    _wordCtrl = TextEditingController();
+    _wordCtrl = TextEditingController(text: widget.initialWord);
     _translationCtrl = TextEditingController();
+    _translation2Ctrl = TextEditingController();
+    _translation3Ctrl = TextEditingController();
     _meaningCtrl = TextEditingController();
+    _meaningPtCtrl = TextEditingController();
     _example1Ctrl = TextEditingController();
+    _exampleTranslation1Ctrl = TextEditingController();
     _example2Ctrl = TextEditingController();
+    _exampleTranslation2Ctrl = TextEditingController();
     _example3Ctrl = TextEditingController();
+    _exampleTranslation3Ctrl = TextEditingController();
     _synonymsCtrl = TextEditingController();
     _oppositeCtrl = TextEditingController();
 
     if (_isEditing) {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadWord());
+    } else {
+      _wordCtrl.addListener(_onWordChanged);
     }
+  }
+
+  void _onWordChanged() {
+    _debounceTimer?.cancel();
+    final value = _wordCtrl.text.trim();
+    if (value.isEmpty) {
+      setState(() => _duplicateWord = null);
+      return;
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 600), () async {
+      final results = await ref.read(wordRepositoryProvider).search(value);
+      final exact = results.where(
+        (w) => w.word.toLowerCase() == value.toLowerCase(),
+      ).toList();
+      if (mounted) {
+        setState(() => _duplicateWord = exact.isNotEmpty ? exact.first : null);
+      }
+    });
   }
 
   Future<void> _loadWord() async {
@@ -74,10 +106,16 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
         _isLoading = false;
         _wordCtrl.text = word.word;
         _translationCtrl.text = word.translation;
+        _translation2Ctrl.text = word.translation2 ?? '';
+        _translation3Ctrl.text = word.translation3 ?? '';
         _meaningCtrl.text = word.meaning ?? '';
+        _meaningPtCtrl.text = word.meaningPt ?? '';
         _example1Ctrl.text = word.example1 ?? '';
+        _exampleTranslation1Ctrl.text = word.exampleTranslation1 ?? '';
         _example2Ctrl.text = word.example2 ?? '';
+        _exampleTranslation2Ctrl.text = word.exampleTranslation2 ?? '';
         _example3Ctrl.text = word.example3 ?? '';
+        _exampleTranslation3Ctrl.text = word.exampleTranslation3 ?? '';
         _synonymsCtrl.text = word.synonyms ?? '';
         _oppositeCtrl.text = word.opposite ?? '';
         _selectedCategory = word.category;
@@ -97,12 +135,20 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _wordCtrl.removeListener(_onWordChanged);
     _wordCtrl.dispose();
     _translationCtrl.dispose();
+    _translation2Ctrl.dispose();
+    _translation3Ctrl.dispose();
     _meaningCtrl.dispose();
+    _meaningPtCtrl.dispose();
     _example1Ctrl.dispose();
+    _exampleTranslation1Ctrl.dispose();
     _example2Ctrl.dispose();
+    _exampleTranslation2Ctrl.dispose();
     _example3Ctrl.dispose();
+    _exampleTranslation3Ctrl.dispose();
     _synonymsCtrl.dispose();
     _oppositeCtrl.dispose();
     super.dispose();
@@ -113,6 +159,127 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
 
   String? _nullable(String? v) => v == null || v.trim().isEmpty ? null : v.trim();
 
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData('text/plain');
+    if (data?.text == null) return;
+    final text = data!.text!;
+
+    String? extractValue(List<String> labels) {
+      int startIndex = -1;
+      String matchedLabel = '';
+      for (final l in labels) {
+        startIndex = text.indexOf(l);
+        if (startIndex != -1) {
+          matchedLabel = l;
+          break;
+        }
+      }
+      if (startIndex == -1) return null;
+      
+      int endIndex = text.length;
+      final allLabels = [
+        'Word:', 'Translation:', 'Meaning:', 'EN:', 'In simple English:', 
+        'PT-BR:', 'PT:', 'Em português:', 'Examples:', 'Example translations:', 
+        'Synonyms:', 'Opposite:', 'Category:', 'Difficulty level:', 'Learning status:'
+      ];
+      
+      final valueStart = startIndex + matchedLabel.length;
+      
+      for (final l in allLabels) {
+        final idx = text.indexOf(l, valueStart);
+        if (idx != -1 && idx < endIndex) {
+          endIndex = idx;
+        }
+      }
+      return text.substring(valueStart, endIndex).trim();
+    }
+
+    List<String> splitList(String? block) {
+      if (block == null || block.isEmpty) return [];
+      if (block.contains('\n')) {
+        return block.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      }
+      final matches = RegExp(r'[^.!?]+[.!?]+').allMatches(block);
+      if (matches.isNotEmpty) {
+         return matches.map((m) => m.group(0)!.trim()).toList();
+      }
+      return [block.trim()];
+    }
+
+    setState(() {
+      final wordMatch = extractValue(['Word:']);
+      if (wordMatch != null) _wordCtrl.text = wordMatch;
+
+      final translationMatch = extractValue(['Translation:']);
+      if (translationMatch != null) {
+        final parts = translationMatch.split(RegExp(r'[/;]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        if (parts.isNotEmpty) _translationCtrl.text = parts[0];
+        if (parts.length > 1) _translation2Ctrl.text = parts[1];
+        if (parts.length > 2) _translation3Ctrl.text = parts.sublist(2).join(' / ');
+      }
+
+      final meaningEn = extractValue(['EN:', 'In simple English:']);
+      if (meaningEn != null) _meaningCtrl.text = meaningEn;
+      
+      final meaningPt = extractValue(['PT-BR:', 'PT:', 'Em português:']);
+      if (meaningPt != null) _meaningPtCtrl.text = meaningPt;
+
+      final examples = splitList(extractValue(['Examples:']));
+      if (examples.isNotEmpty) _example1Ctrl.text = examples[0];
+      if (examples.length > 1) _example2Ctrl.text = examples[1];
+      if (examples.length > 2) _example3Ctrl.text = examples[2];
+
+      final exTrans = splitList(extractValue(['Example translations:']));
+      if (exTrans.isNotEmpty) _exampleTranslation1Ctrl.text = exTrans[0];
+      if (exTrans.length > 1) _exampleTranslation2Ctrl.text = exTrans[1];
+      if (exTrans.length > 2) _exampleTranslation3Ctrl.text = exTrans[2];
+
+      final synonymsMatch = extractValue(['Synonyms:']);
+      if (synonymsMatch != null) _synonymsCtrl.text = synonymsMatch;
+
+      final oppositeMatch = extractValue(['Opposite:']);
+      if (oppositeMatch != null) _oppositeCtrl.text = oppositeMatch;
+
+      final categoryMatch = extractValue(['Category:']);
+      if (categoryMatch != null) {
+        final cats = ref.read(categoryListProvider).valueOrNull?.map((c) => c.name).toList() ?? [];
+        final cat = cats.firstWhere((c) => c.toLowerCase() == categoryMatch.toLowerCase(), orElse: () => '');
+        if (cat.isNotEmpty) _selectedCategory = cat;
+      }
+      
+      final diffMatch = extractValue(['Difficulty level:']);
+      if (diffMatch != null) {
+        final d = diffMatch.toLowerCase();
+        if (d.contains('basic') || d.contains('easy')) {
+          _difficulty = 1;
+        } else if (d.contains('medium') || d.contains('intermediate')) {
+          _difficulty = 2;
+        } else if (d.contains('hard') || d.contains('advanced')) {
+          _difficulty = 3;
+        }
+      }
+      
+      final statusMatch = extractValue(['Learning status:']);
+      if (statusMatch != null) {
+        final s = statusMatch.toLowerCase();
+        if (s.contains('learned') || s.contains('known')) {
+          _status = 'learned';
+        } else if (s.contains('difficult') || s.contains('hard')) {
+          _status = 'difficult';
+        } else {
+          _status = 'learning';
+        }
+      }
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Dados colados com sucesso!'),
+        backgroundColor: AppTheme.primary,
+      ));
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -122,10 +289,16 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
       id: widget.wordId,
       word: _wordCtrl.text.trim(),
       translation: _translationCtrl.text.trim(),
+      translation2: _nullable(_translation2Ctrl.text),
+      translation3: _nullable(_translation3Ctrl.text),
       meaning: _nullable(_meaningCtrl.text),
+      meaningPt: _nullable(_meaningPtCtrl.text),
       example1: _nullable(_example1Ctrl.text),
+      exampleTranslation1: _nullable(_exampleTranslation1Ctrl.text),
       example2: _nullable(_example2Ctrl.text),
+      exampleTranslation2: _nullable(_exampleTranslation2Ctrl.text),
       example3: _nullable(_example3Ctrl.text),
+      exampleTranslation3: _nullable(_exampleTranslation3Ctrl.text),
       synonyms: _nullable(_synonymsCtrl.text),
       opposite: _nullable(_oppositeCtrl.text),
       category: _selectedCategory,
@@ -146,7 +319,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
         content: Text(_isEditing ? 'Palavra atualizada com sucesso!' : 'Palavra salva com sucesso!'),
         backgroundColor: AppTheme.primary,
       ));
-      context.go('/words');
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/words');
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -163,7 +340,20 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Word' : 'Add Word'),
-        leading: BackButton(onPressed: () => context.go('/words')),
+        leading: BackButton(onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/words');
+          }
+        }),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.paste_rounded),
+            tooltip: 'Paste from AI',
+            onPressed: _pasteFromClipboard,
+          ),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -172,17 +362,30 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
           children: [
             const _SectionLabel('REQUIRED'),
             _Field(controller: _wordCtrl, label: 'Word', validator: _notEmpty),
+            if (_duplicateWord != null) _DuplicateWarning(word: _duplicateWord!),
             const SizedBox(height: 12),
             _Field(controller: _translationCtrl, label: 'Translation', validator: _notEmpty),
+            const SizedBox(height: 12),
+            _Field(controller: _translation2Ctrl, label: 'Translation 2 (optional)'),
+            const SizedBox(height: 12),
+            _Field(controller: _translation3Ctrl, label: 'Translation 3 (optional)'),
             const SizedBox(height: 20),
             const _SectionLabel('DETAILS'),
-            _Field(controller: _meaningCtrl, label: 'Meaning'),
+            _Field(controller: _meaningCtrl, label: 'Meaning (In simple English)'),
+            const SizedBox(height: 12),
+            _Field(controller: _meaningPtCtrl, label: 'Meaning (Em português)'),
             const SizedBox(height: 12),
             _Field(controller: _example1Ctrl, label: 'Example 1'),
             const SizedBox(height: 12),
+            _Field(controller: _exampleTranslation1Ctrl, label: 'Example 1 Translation'),
+            const SizedBox(height: 12),
             _Field(controller: _example2Ctrl, label: 'Example 2'),
             const SizedBox(height: 12),
+            _Field(controller: _exampleTranslation2Ctrl, label: 'Example 2 Translation'),
+            const SizedBox(height: 12),
             _Field(controller: _example3Ctrl, label: 'Example 3'),
+            const SizedBox(height: 12),
+            _Field(controller: _exampleTranslation3Ctrl, label: 'Example 3 Translation'),
             const SizedBox(height: 12),
             _Field(controller: _synonymsCtrl, label: 'Synonyms'),
             const SizedBox(height: 12),
@@ -193,8 +396,8 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
               key: ValueKey(_selectedCategory),
               initialValue: _selectedCategory,
               decoration: const InputDecoration(hintText: 'Select a category'),
-              items: _wordCategories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+              items: (ref.watch(categoryListProvider).valueOrNull ?? [])
+                  .map((c) => DropdownMenuItem(value: c.name, child: Text(c.name)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
             ),
@@ -243,7 +446,7 @@ class _SectionLabel extends StatelessWidget {
         style: GoogleFonts.nunito(
           fontSize: 11,
           fontWeight: FontWeight.w800,
-          color: AppTheme.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           letterSpacing: 1.2,
         ),
       ),
@@ -264,6 +467,62 @@ class _Field extends StatelessWidget {
       controller: controller,
       validator: validator,
       decoration: InputDecoration(labelText: label),
+    );
+  }
+}
+
+class _DuplicateWarning extends StatelessWidget {
+  final Word word;
+  const _DuplicateWarning({required this.word});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Esta palavra já está no dicionário.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.warning,
+                  ),
+                ),
+                Text(
+                  '${word.word} → ${word.translation}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push('/words/${word.id}'),
+            child: Text(
+              'Ver',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.warning,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -299,7 +558,7 @@ class _DiffChip extends StatelessWidget {
           style: GoogleFonts.nunito(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: selected ? color : AppTheme.textSecondary,
+            color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
