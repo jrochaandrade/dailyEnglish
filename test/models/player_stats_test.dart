@@ -38,6 +38,11 @@ void main() {
       final s = PlayerStats.fromMap({'id': 1, 'streak_at_risk': 1});
       expect(s.streakAtRisk, true);
     });
+
+    test('lastActivityDate is null when absent from map', () {
+      final s = PlayerStats.fromMap({'id': 1});
+      expect(s.lastActivityDate, isNull);
+    });
   });
 
   group('PlayerStats.toMap', () {
@@ -48,6 +53,34 @@ void main() {
       expect(map['xp'], 50);
       expect(map['streak'], 3);
       expect(map['streak_at_risk'], 0);
+    });
+
+    test('converts streakAtRisk true to 1', () {
+      final s = const PlayerStats(streakAtRisk: true);
+      final map = s.toMap();
+      expect(map['streak_at_risk'], 1);
+    });
+  });
+
+  group('PlayerStats round-trip', () {
+    test('fromMap(toMap()) preserves all fields', () {
+      const original = PlayerStats(
+        xp: 150,
+        level: 2,
+        streak: 5,
+        shields: 1,
+        lastActivityDate: '2026-05-10',
+        streakAtRisk: true,
+        gamesPlayedToday: 'scramble,fill_blank',
+      );
+      final restored = PlayerStats.fromMap(original.toMap());
+      expect(restored.xp, original.xp);
+      expect(restored.level, original.level);
+      expect(restored.streak, original.streak);
+      expect(restored.shields, original.shields);
+      expect(restored.lastActivityDate, original.lastActivityDate);
+      expect(restored.streakAtRisk, original.streakAtRisk);
+      expect(restored.gamesPlayedToday, original.gamesPlayedToday);
     });
   });
 
