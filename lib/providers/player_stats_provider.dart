@@ -27,7 +27,9 @@ class PlayerStatsNotifier extends AsyncNotifier<PlayerStats> {
     if (daysDiff == 2) {
       // Missed exactly 1 day
       if (stats.shields > 0) {
-        updated = stats.copyWith(shields: stats.shields - 1, streakAtRisk: false, gamesPlayedToday: '');
+        // Advance lastActivityDate to yesterday so subsequent opens see daysDiff==1
+        final yesterday = DateTime.parse(last).add(const Duration(days: 1)).toIso8601String().substring(0, 10);
+        updated = stats.copyWith(shields: stats.shields - 1, streakAtRisk: false, gamesPlayedToday: '', lastActivityDate: yesterday);
       } else {
         updated = stats.copyWith(streakAtRisk: true, gamesPlayedToday: '');
       }
