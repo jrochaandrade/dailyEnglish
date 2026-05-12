@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import '../../providers/word_provider.dart';
+import '../../providers/player_stats_provider.dart';
+import '../../models/player_stats.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/backup_service.dart';
 
@@ -20,6 +22,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final wordCount = ref.watch(totalWordCountProvider).valueOrNull ?? 0;
+    final stats = ref.watch(playerStatsProvider).valueOrNull;
 
     return PopScope(
       canPop: false,
@@ -60,7 +63,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: GoogleFonts.nunito(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 32),
-              _StatsCard(wordCount: wordCount),
+              _StatsCard(wordCount: wordCount, stats: stats),
               const SizedBox(height: 24),
               _MenuButton(
                 label: 'My Words',
@@ -140,34 +143,115 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 class _StatsCard extends StatelessWidget {
   final int wordCount;
-  const _StatsCard({required this.wordCount});
+  final PlayerStats? stats;
+  const _StatsCard({required this.wordCount, this.stats});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Row(
+        child: Column(
           children: [
-            const Icon(Icons.menu_book_rounded, size: 48, color: AppTheme.secondary),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  '$wordCount',
-                  style: GoogleFonts.nunito(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.primary,
+                const Icon(Icons.menu_book_rounded, size: 40, color: AppTheme.secondary),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$wordCount',
+                      style: GoogleFonts.nunito(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                    Text(
+                      'words in your dictionary',
+                      style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                if (stats != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Level ${stats!.level}',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SizedBox(
+                        width: 80,
+                        child: LinearProgressIndicator(
+                          value: (stats!.xp % 100) / 100,
+                          color: AppTheme.primary,
+                          backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                          minHeight: 6,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${stats!.xp % 100}/100 XP',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  'words in your dictionary',
-                  style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
               ],
             ),
+            if (stats != null) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text('🔥', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${stats!.streak} day streak',
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: stats!.streakAtRisk
+                          ? AppTheme.error
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (stats!.streakAtRisk) ...[
+                    const SizedBox(width: 4),
+                    Text('⚠️ at risk',
+                        style: GoogleFonts.nunito(fontSize: 12, color: AppTheme.error)),
+                  ],
+                  const Spacer(),
+                  if (stats!.shields > 0) ...[
+                    const Text('🛡', style: TextStyle(fontSize: 18)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '×${stats!.shields}',
+                      style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
           ],
         ),
       ),
