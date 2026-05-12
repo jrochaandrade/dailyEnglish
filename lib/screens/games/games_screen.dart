@@ -27,10 +27,11 @@ class _GamesScreenState extends State<GamesScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 'Choose a source',
+                textAlign: TextAlign.start,
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -65,6 +66,7 @@ class _GamesScreenState extends State<GamesScreen> {
               const SizedBox(height: 24),
               Text(
                 'Games',
+                textAlign: TextAlign.start,
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
