@@ -47,6 +47,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
 
   Future<void> _load() async {
     final items = await loadGameItems(widget.source, ref);
+    if (!mounted) return;
     if (items.length < 4) {
       setState(() {
         _errorMessage = 'Not enough ${gameSourceLabel(widget.source)} to play. Add at least 4 items.';
@@ -61,10 +62,8 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
       if (widget.source == GameSource.diary) {
         // Diary mode: gapped sentence as question, word choices as options
         final sentence = item.examples.isNotEmpty ? item.examples[0] : item.term;
-        final idx = sentence.toLowerCase().indexOf(item.term.toLowerCase());
-        final gapped = idx >= 0
-            ? '${sentence.substring(0, idx)}___${sentence.substring(idx + item.term.length)}'
-            : sentence;
+        final pattern = RegExp(r'\b' + RegExp.escape(item.term) + r'\b', caseSensitive: false);
+        final gapped = pattern.hasMatch(sentence) ? sentence.replaceFirst(pattern, '___') : sentence;
         final distractors = items
             .where((i) => i.id != item.id && i.term != item.term)
             .toList()
@@ -89,6 +88,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
         correctIndex: opts.indexOf(item.translation),
       );
     }).toList();
+    if (!mounted) return;
     setState(() { _rounds = rounds; _phase = _Phase.playing; });
   }
 
@@ -102,10 +102,11 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
     });
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (_current + 1 >= _rounds.length) {
       final xp = _score * 10;
-      ref.read(playerStatsProvider.notifier).recordSession('multiple_choice', xp);
+      await ref.read(playerStatsProvider.notifier).recordSession('multiple_choice', xp);
+      if (!mounted) return;
       setState(() { _phase = _Phase.results; });
     } else {
       setState(() { _current++; _selectedIndex = null; _answered = false; });
@@ -114,16 +115,16 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_phase == _Phase.loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (_phase == _Phase.results) return _buildResults(context);
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/games'))),
         body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_errorMessage!, textAlign: TextAlign.center))),
       );
     }
+    if (_phase == _Phase.loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_phase == _Phase.results) return _buildResults(context);
     return _buildPlaying(context);
   }
 
@@ -210,7 +211,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
               const Spacer(),
               if (_answered)
                 ElevatedButton(
-                  onPressed: _next,
+                  onPressed: () => _next(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary, foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(50),
