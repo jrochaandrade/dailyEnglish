@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import 'game_content.dart';
 
-class GamesScreen extends ConsumerStatefulWidget {
+class GamesScreen extends StatefulWidget {
   const GamesScreen({super.key});
 
   @override
-  ConsumerState<GamesScreen> createState() => _GamesScreenState();
+  State<GamesScreen> createState() => _GamesScreenState();
 }
 
-class _GamesScreenState extends ConsumerState<GamesScreen> {
+class _GamesScreenState extends State<GamesScreen> {
   GameSource _source = GameSource.words;
 
   @override
