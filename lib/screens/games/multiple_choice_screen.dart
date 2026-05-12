@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/services/audio_service.dart';
 import '../../providers/player_stats_provider.dart';
 import 'game_content.dart';
+import 'game_result_widgets.dart';
 
 const _kRounds = 10;
 
@@ -128,7 +129,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
 
   Widget _buildPlaying(BuildContext context) {
     final round = _rounds[_current];
-    final progress = _current / _rounds.length;
+    final progress = (_current + 1) / _rounds.length;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -245,20 +246,31 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
               Text(gameSourceLabel(widget.source),
                   style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               const SizedBox(height: 24),
-              _ResultCircle(score: _score, total: _rounds.length),
+              ResultCircle(score: _score, total: _rounds.length),
               const SizedBox(height: 16),
               Text('+$xp XP', style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w800,
                   color: AppTheme.primary)),
               if (stats != null) ...[
                 const SizedBox(height: 8),
-                _XpBar(stats: stats),
+                XpBar(stats: stats),
                 const SizedBox(height: 8),
-                _StreakRow(stats: stats),
+                StreakRow(stats: stats),
               ],
               const SizedBox(height: 32),
               SizedBox(width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => setState(() { _current = 0; _score = 0; _selectedIndex = null; _answered = false; _phase = _Phase.loading; _load(); }),
+                  onPressed: () {
+                    setState(() {
+                      _current = 0;
+                      _score = 0;
+                      _selectedIndex = null;
+                      _answered = false;
+                      _errorMessage = null;
+                      _rounds = [];
+                      _phase = _Phase.loading;
+                    });
+                    _load();
+                  },
                   icon: const Icon(Icons.replay_rounded),
                   label: Text('Play Again', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white,
@@ -290,72 +302,5 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
         ),
       ),
     );
-  }
-}
-
-// Shared result widgets — defined once here, imported by other game screens
-class _ResultCircle extends StatelessWidget {
-  final int score;
-  final int total;
-  const _ResultCircle({required this.score, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = total == 0 ? 0.0 : score / total;
-    return SizedBox(
-      width: 110, height: 110,
-      child: Stack(alignment: Alignment.center, children: [
-        SizedBox(width: 110, height: 110,
-          child: CircularProgressIndicator(value: pct, strokeWidth: 10,
-              color: AppTheme.primary, backgroundColor: AppTheme.primary.withValues(alpha: 0.15))),
-        Text('$score/$total', style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-      ]),
-    );
-  }
-}
-
-class _XpBar extends StatelessWidget {
-  final dynamic stats; // PlayerStats
-  const _XpBar({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    final xpInLevel = stats.xp % 100;
-    return Column(children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Level ${stats.level}', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        Text('${stats.xp} XP total', style: GoogleFonts.nunito(fontSize: 13,
-            color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      ]),
-      const SizedBox(height: 4),
-      LinearProgressIndicator(value: xpInLevel / 100, color: AppTheme.primary,
-          backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-          minHeight: 8, borderRadius: BorderRadius.circular(4)),
-    ]);
-  }
-}
-
-class _StreakRow extends StatelessWidget {
-  final dynamic stats; // PlayerStats
-  const _StreakRow({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Text('🔥', style: TextStyle(fontSize: 20)),
-      const SizedBox(width: 4),
-      Text('${stats.streak} day streak', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700)),
-      if (stats.shields > 0) ...[
-        const SizedBox(width: 12),
-        const Text('🛡', style: TextStyle(fontSize: 20)),
-        const SizedBox(width: 4),
-        Text('×${stats.shields}', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700)),
-      ],
-      if (stats.streakAtRisk) ...[
-        const SizedBox(width: 8),
-        Text('at risk!', style: GoogleFonts.nunito(fontSize: 13, color: AppTheme.error, fontWeight: FontWeight.w700)),
-      ],
-    ]);
   }
 }
