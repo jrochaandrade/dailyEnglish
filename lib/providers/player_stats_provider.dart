@@ -27,12 +27,12 @@ class PlayerStatsNotifier extends AsyncNotifier<PlayerStats> {
     if (daysDiff == 2) {
       // Missed exactly 1 day
       if (stats.shields > 0) {
-        updated = stats.copyWith(shields: stats.shields - 1, streakAtRisk: false);
+        updated = stats.copyWith(shields: stats.shields - 1, streakAtRisk: false, gamesPlayedToday: '');
       } else {
-        updated = stats.copyWith(streakAtRisk: true);
+        updated = stats.copyWith(streakAtRisk: true, gamesPlayedToday: '');
       }
     } else {
-      // 2+ days missed — reset
+      // 3+ days since last play — streak broken
       updated = stats.copyWith(streak: 0, streakAtRisk: false, gamesPlayedToday: '');
     }
     await ref.read(playerStatsRepositoryProvider).save(updated);
