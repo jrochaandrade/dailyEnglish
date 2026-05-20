@@ -19,10 +19,14 @@ class GlobalSearchResults {
 
   bool get isEmpty => words.isEmpty && phrasalVerbs.isEmpty && phrases.isEmpty;
 
-  static const empty = GlobalSearchResults(words: [], phrasalVerbs: [], phrases: []);
+  static const empty = GlobalSearchResults(
+    words: <Word>[],
+    phrasalVerbs: <PhrasalVerb>[],
+    phrases: <Phrase>[],
+  );
 }
 
-final globalSearchProvider = FutureProvider.family<GlobalSearchResults, String>((ref, query) async {
+final globalSearchProvider = FutureProvider.autoDispose.family<GlobalSearchResults, String>((ref, query) async {
   if (query.trim().isEmpty) return GlobalSearchResults.empty;
 
   final wordRepo = ref.read(wordRepositoryProvider);
