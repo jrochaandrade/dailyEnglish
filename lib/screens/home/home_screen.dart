@@ -9,6 +9,8 @@ import '../../models/player_stats.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/backup_service.dart';
 import '../../core/services/google_drive_service.dart';
+import 'dart:async';
+import '../../providers/global_search_provider.dart';
 
 enum _HomeMenuItem { categories, exportBackup, importBackup, backupToDrive, restoreFromDrive }
 
@@ -21,6 +23,23 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   DateTime? _lastPressedAt;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() => _searchQuery = value.trim());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +166,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ],
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Search words, phrasal verbs, phrases…',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                ),
               ),
               const SizedBox(height: 24),
               _StatsCard(wordCount: wordCount, stats: stats),
