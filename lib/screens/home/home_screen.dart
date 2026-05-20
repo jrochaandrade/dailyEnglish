@@ -197,7 +197,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               if (_searchQuery.isNotEmpty)
-                _GlobalSearchBody(query: _searchQuery)
+                _GlobalSearchBody(key: ValueKey(_searchQuery), query: _searchQuery)
               else ...[
                 const SizedBox(height: 24),
                 _StatsCard(wordCount: wordCount, stats: stats),
@@ -551,7 +551,7 @@ class _GlobalSearchBody extends ConsumerWidget {
                     subtitle: w.translation,
                     typeLabel: 'Word',
                     typeColor: AppTheme.secondary,
-                    onTap: () => context.push('/words/${w.id}'),
+                    onTap: () => context.push('/words/${w.id!}'),
                   )),
               const SizedBox(height: 16),
             ],
@@ -562,7 +562,7 @@ class _GlobalSearchBody extends ConsumerWidget {
                     subtitle: pv.meaningPt ?? pv.meaning,
                     typeLabel: 'Phrasal Verb',
                     typeColor: AppTheme.tertiary,
-                    onTap: () => context.push('/phrasal-verbs/${pv.id}'),
+                    onTap: () => context.push('/phrasal-verbs/${pv.id!}'),
                   )),
               const SizedBox(height: 16),
             ],
@@ -573,7 +573,7 @@ class _GlobalSearchBody extends ConsumerWidget {
                     subtitle: p.translation,
                     typeLabel: 'Phrase',
                     typeColor: AppTheme.primary,
-                    onTap: () => context.push('/phrases/${p.id}'),
+                    onTap: () => context.push('/phrases/${p.id!}'),
                   )),
               const SizedBox(height: 16),
             ],
