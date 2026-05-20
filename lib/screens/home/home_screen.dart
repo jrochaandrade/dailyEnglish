@@ -511,7 +511,7 @@ class _StudyCard extends StatelessWidget {
 
 class _GlobalSearchBody extends ConsumerWidget {
   final String query;
-  const _GlobalSearchBody({required this.query});
+  const _GlobalSearchBody({super.key, required this.query});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
