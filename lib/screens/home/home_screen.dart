@@ -8,8 +8,9 @@ import '../../providers/player_stats_provider.dart';
 import '../../models/player_stats.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/backup_service.dart';
+import '../../core/services/google_drive_service.dart';
 
-enum _HomeMenuItem { categories, exportBackup, importBackup }
+enum _HomeMenuItem { categories, exportBackup, importBackup, backupToDrive, restoreFromDrive }
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -94,20 +95,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ref.read(backupServiceProvider).exportBackup(context);
                         case _HomeMenuItem.importBackup:
                           ref.read(backupServiceProvider).importBackup(context);
+                        case _HomeMenuItem.backupToDrive:
+                          ref.read(googleDriveServiceProvider).backupToDrive(context);
+                        case _HomeMenuItem.restoreFromDrive:
+                          ref.read(googleDriveServiceProvider).restoreFromDrive(context);
                       }
                     },
                     itemBuilder: (context) => [
-                      PopupMenuItem(
+                      const PopupMenuItem(
                         value: _HomeMenuItem.categories,
-                        child: const Text('Categories'),
+                        child: ListTile(
+                          leading: Icon(Icons.label_rounded),
+                          title: Text('Categories'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                      PopupMenuItem(
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
                         value: _HomeMenuItem.exportBackup,
-                        child: const Text('Export Backup'),
+                        child: ListTile(
+                          leading: Icon(Icons.cloud_upload_rounded),
+                          title: Text('Export Backup'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                      PopupMenuItem(
+                      const PopupMenuItem(
                         value: _HomeMenuItem.importBackup,
-                        child: const Text('Restore Backup'),
+                        child: ListTile(
+                          leading: Icon(Icons.settings_backup_restore_rounded),
+                          title: Text('Restore Backup'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: _HomeMenuItem.backupToDrive,
+                        child: ListTile(
+                          leading: Icon(Icons.drive_folder_upload_rounded),
+                          title: Text('Backup to Google Drive'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: _HomeMenuItem.restoreFromDrive,
+                        child: ListTile(
+                          leading: Icon(Icons.cloud_download_rounded),
+                          title: Text('Restore from Google Drive'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
                     ],
                   ),
@@ -173,14 +208,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   letterSpacing: 1.2,
                 ),
-              ),
-              const SizedBox(height: 12),
-              _StudyCard(
-                label: 'English Quest',
-                subtitle: 'Level up your vocabulary hero',
-                icon: Icons.shield_rounded,
-                color: AppTheme.warning,
-                onTap: () => context.push('/games/quest'),
               ),
               const SizedBox(height: 12),
               _StudyCard(

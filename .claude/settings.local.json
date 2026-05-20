@@ -12,7 +12,31 @@
       "Bash(git ls-tree *)",
       "WebFetch(domain:example.com)",
       "WebSearch",
-      "WebFetch(domain:)"
+      "WebFetch(domain:)",
+      "Bash(./gradlew signingReport)",
+      "Bash(flutter doctor *)",
+      "Read(//c/Program Files/Android/Android Studio/jbr/bin/**)",
+      "Bash(flutter build *)",
+      "Bash(adb devices *)",
+      "Bash(flutter devices *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(c.get\\('package_name',''\\)\\) for c in d['client']]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(c.get\\('package_name',''\\)\\) for c in d['client']]\")",
+      "Bash(xargs grep *)",
+      "Bash(flutter run *)",
+      "Bash(flutter install *)",
+      "Bash(adb -s RQCX401RJCL logcat -d)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL logcat -d -t 200)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe devices *)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL logcat --clear)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL shell am start -n com.devrocha.daily_english/io.flutter.embedding.android.FlutterActivity)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL logcat -d -t 300)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL shell pm list packages)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL shell monkey -p com.devrocha.daily_english 1)",
+      "Bash(C:/Users/jroch/AppData/Local/Android/sdk/platform-tools/adb.exe -s RQCX401RJCL logcat -d)",
+      "Bash(python -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(python)",
+      "Bash(dart run *)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

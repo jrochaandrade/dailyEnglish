@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "687585142168",
+    "project_id": "daily-english-app-3b5d2",
+    "storage_bucket": "daily-english-app-3b5d2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:687585142168:android:2e045d5e058bbdae86f7ed",
+        "android_client_info": {
+          "package_name": "com.devrocha.daily_english"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "687585142168-a3ojd0icc7f7i58tgi6v056gtkqqsjin.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.devrocha.daily_english",
+            "certificate_hash": "b6ed02ba42795c049e70c785bfcb871119b665b4"
+          }
+        },
+        {
+          "client_id": "687585142168-n3jiosk7bemq6qugs6orlb6vuflrqp58.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.devrocha.daily_english",
+            "certificate_hash": "edb71e1b5c866763d8d2f875515302e731fe1a3a"
+          }
+        },
+        {
+          "client_id": "687585142168-jimbcft6evuecjionnru48qnvnqh9viv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrQq5Brh5AEAtIop-GmBGKFT_pUNWJWS8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "687585142168-jimbcft6evuecjionnru48qnvnqh9viv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

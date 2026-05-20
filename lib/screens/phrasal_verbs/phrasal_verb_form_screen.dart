@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,8 @@ class _PhrasalVerbFormScreenState
   int _difficulty = 1;
   String _status = 'learning';
   DateTime? _originalCreatedAt;
+  PhrasalVerb? _duplicatePV;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -57,6 +60,9 @@ class _PhrasalVerbFormScreenState
     if (_isEditing) {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadPhrasalVerb());
+    } else {
+      _baseVerbCtrl.addListener(_onPvChanged);
+      _particleCtrl.addListener(_onPvChanged);
     }
   }
 
@@ -100,8 +106,30 @@ class _PhrasalVerbFormScreenState
     }
   }
 
+  void _onPvChanged() {
+    _debounceTimer?.cancel();
+    final base = _baseVerbCtrl.text.trim();
+    final part = _particleCtrl.text.trim();
+    if (base.isEmpty) {
+      setState(() => _duplicatePV = null);
+      return;
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 600), () async {
+      final results = await ref.read(phrasalVerbRepositoryProvider).search(base);
+      final exact = results.where(
+        (pv) => pv.baseVerb.toLowerCase() == base.toLowerCase() && pv.particle.toLowerCase() == part.toLowerCase(),
+      ).toList();
+      if (mounted) {
+        setState(() => _duplicatePV = exact.isNotEmpty ? exact.first : null);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _baseVerbCtrl.removeListener(_onPvChanged);
+    _particleCtrl.removeListener(_onPvChanged);
     _baseVerbCtrl.dispose();
     _particleCtrl.dispose();
     _meaningCtrl.dispose();
@@ -338,6 +366,7 @@ class _PhrasalVerbFormScreenState
               label: 'Particle',
               validator: _notEmpty,
             ),
+            if (_duplicatePV != null) _DuplicateWarning(pv: _duplicatePV!),
             const SizedBox(height: 12),
             _Field(
               controller: _meaningCtrl,
@@ -505,6 +534,62 @@ class _DiffChip extends StatelessWidget {
                 : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DuplicateWarning extends StatelessWidget {
+  final PhrasalVerb pv;
+  const _DuplicateWarning({required this.pv});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Este phrasal verb já está cadastrado.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.warning,
+                  ),
+                ),
+                Text(
+                  '${pv.baseVerb} ${pv.particle} → ${pv.meaning}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push('/phrasal-verbs/${pv.id}'),
+            child: Text(
+              'Ver',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.warning,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

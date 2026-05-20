@@ -1,4 +1,4 @@
-package com.dailyenglish.daily_english
+package com.devrocha.daily_english
 
 import io.flutter.embedding.android.FlutterActivity
 

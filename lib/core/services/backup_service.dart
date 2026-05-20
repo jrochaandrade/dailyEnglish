@@ -8,6 +8,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/word_provider.dart';
 import '../../providers/diary_provider.dart';
+import '../../providers/phrasal_verb_provider.dart';
+import '../../providers/phrase_provider.dart';
+import '../../providers/player_stats_provider.dart';
 
 class BackupService {
   final Ref ref;
@@ -101,6 +104,9 @@ class BackupService {
       ref.invalidate(databaseProvider);
       ref.invalidate(wordListProvider);
       ref.invalidate(diaryListProvider);
+      ref.invalidate(phrasalVerbListProvider);
+      ref.invalidate(phraseListProvider);
+      ref.invalidate(playerStatsProvider);
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

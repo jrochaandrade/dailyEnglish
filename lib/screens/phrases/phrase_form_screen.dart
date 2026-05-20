@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +34,8 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
 
   int _difficulty = 1;
   DateTime? _originalCreatedAt;
+  Phrase? _duplicatePhrase;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -52,6 +55,8 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
     if (_isEditing) {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadPhrase());
+    } else {
+      _phraseCtrl.addListener(_onPhraseChanged);
     }
   }
 
@@ -83,8 +88,28 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
     }
   }
 
+  void _onPhraseChanged() {
+    _debounceTimer?.cancel();
+    final value = _phraseCtrl.text.trim();
+    if (value.isEmpty) {
+      setState(() => _duplicatePhrase = null);
+      return;
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 600), () async {
+      final results = await ref.read(phraseRepositoryProvider).search(value);
+      final exact = results.where(
+        (p) => p.phrase.toLowerCase() == value.toLowerCase(),
+      ).toList();
+      if (mounted) {
+        setState(() => _duplicatePhrase = exact.isNotEmpty ? exact.first : null);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _phraseCtrl.removeListener(_onPhraseChanged);
     _phraseCtrl.dispose();
     _translationCtrl.dispose();
     _meaningEnCtrl.dispose();
@@ -282,6 +307,7 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
           children: [
             const _SectionLabel('REQUIRED'),
             _Field(controller: _phraseCtrl, label: 'Phrase (English)', validator: _notEmpty),
+            if (_duplicatePhrase != null) _DuplicateWarning(phrase: _duplicatePhrase!),
             const SizedBox(height: 12),
             _Field(controller: _translationCtrl, label: 'Translation (Portuguese)', validator: _notEmpty),
             const SizedBox(height: 20),
@@ -393,6 +419,62 @@ class _DiffChip extends StatelessWidget {
             color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DuplicateWarning extends StatelessWidget {
+  final Phrase phrase;
+  const _DuplicateWarning({required this.phrase});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Esta frase já está cadastrada.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.warning,
+                  ),
+                ),
+                Text(
+                  '${phrase.phrase} → ${phrase.translation}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push('/phrases/${phrase.id}'),
+            child: Text(
+              'Ver',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.warning,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

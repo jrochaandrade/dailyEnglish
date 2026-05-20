@@ -7,7 +7,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/services/audio_service.dart';
 import '../../providers/player_stats_provider.dart';
 import 'game_content.dart';
-import 'game_result_widgets.dart';
 
 enum _QuestPhase { loading, playing, results }
 
@@ -162,7 +161,7 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
       // Bonus XP for winning
       _xpEarned += 50;
     }
-    await ref.read(playerStatsProvider.notifier).recordSession('quest', _xpEarned);
+    await ref.read(playerStatsProvider.notifier).recordSession('quest_battle', _xpEarned);
     if (!mounted) return;
     setState(() => _phase = _QuestPhase.results);
   }
@@ -497,10 +496,11 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
               ),
               const SizedBox(height: 48),
               ElevatedButton(
-                onPressed: () => context.go('/'),
+                onPressed: () => context.pop(),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
                   backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: const Text('BACK TO HOME', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -543,4 +543,3 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
     );
   }
 }
-

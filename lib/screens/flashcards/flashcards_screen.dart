@@ -10,9 +10,8 @@ import '../../providers/player_stats_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/sm2.dart';
 import '../../core/services/audio_service.dart';
-import '../games/game_result_widgets.dart';
 
-enum _DeckType { wordsDue, wordsDifficult, phrasalVerbsDue, phrasalVerbsDifficult, phrasesDue, phrasesDifficult }
+enum _DeckType { wordsDue, wordsDifficult, wordsAll, phrasalVerbsDue, phrasalVerbsDifficult, phrasalVerbsAll, phrasesDue, phrasesDifficult, phrasesAll }
 
 class _FlashCard {
   final int id;
@@ -20,6 +19,8 @@ class _FlashCard {
   final String back;
   final String? meaningEn;
   final String? example1;
+  final String? example2;
+  final String? example3;
   final int difficulty;
   final _DeckType deckType;
   final int srInterval;
@@ -32,6 +33,8 @@ class _FlashCard {
     required this.back,
     this.meaningEn,
     this.example1,
+    this.example2,
+    this.example3,
     required this.difficulty,
     required this.deckType,
     this.srInterval = 0,
@@ -65,110 +68,82 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       switch (_deckType) {
         case _DeckType.wordsDue:
           final words = await ref.read(wordRepositoryProvider).getDueWords();
-          cards = words
-              .map((w) => _FlashCard(
-                    id: w.id!,
-                    front: w.word,
-                    back: [w.translation, w.translation2, w.translation3]
-                        .whereType<String>()
-                        .join(' / '),
-                    meaningEn: w.meaning,
-                    example1: w.example1,
-                    difficulty: w.difficulty,
-                    deckType: _deckType,
-                    srInterval: w.srInterval,
-                    easeFactor: w.easeFactor,
-                    srRepetitions: w.srRepetitions,
-                  ))
-              .toList();
+          cards = words.map((w) => _FlashCard(
+                id: w.id!, front: w.word,
+                back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
+                meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                difficulty: w.difficulty, deckType: _deckType,
+                srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+              )).toList();
         case _DeckType.wordsDifficult:
           final all = await ref.read(wordRepositoryProvider).getAll();
-          final filtered = all.where((w) => w.status == 'difficult').toList()
-            ..shuffle();
-          cards = filtered
+          cards = (all.where((w) => w.status == 'difficult').toList()..shuffle())
               .map((w) => _FlashCard(
-                    id: w.id!,
-                    front: w.word,
-                    back: [w.translation, w.translation2, w.translation3]
-                        .whereType<String>()
-                        .join(' / '),
-                    meaningEn: w.meaning,
-                    example1: w.example1,
-                    difficulty: w.difficulty,
-                    deckType: _deckType,
-                    srInterval: w.srInterval,
-                    easeFactor: w.easeFactor,
-                    srRepetitions: w.srRepetitions,
-                  ))
-              .toList();
+                id: w.id!, front: w.word,
+                back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
+                meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                difficulty: w.difficulty, deckType: _deckType,
+                srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+              )).toList();
+        case _DeckType.wordsAll:
+          final all = await ref.read(wordRepositoryProvider).getAll();
+          cards = (all..shuffle()).map((w) => _FlashCard(
+                id: w.id!, front: w.word,
+                back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
+                meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                difficulty: w.difficulty, deckType: _deckType,
+                srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+              )).toList();
         case _DeckType.phrasalVerbsDue:
           final pvs = await ref.read(phrasalVerbRepositoryProvider).getDue();
-          cards = pvs
-              .map((pv) => _FlashCard(
-                    id: pv.id!,
-                    front: pv.verb,
-                    back: pv.meaningPt ?? pv.meaning,
-                    meaningEn: pv.meaningEn,
-                    example1: pv.example1,
-                    difficulty: pv.difficulty,
-                    deckType: _deckType,
-                    srInterval: pv.srInterval,
-                    easeFactor: pv.easeFactor,
-                    srRepetitions: pv.srRepetitions,
-                  ))
-              .toList();
+          cards = pvs.map((pv) => _FlashCard(
+                id: pv.id!, front: pv.verb, back: pv.meaningPt ?? pv.meaning,
+                meaningEn: pv.meaningEn, example1: pv.example1, example2: pv.example2, example3: pv.example3,
+                difficulty: pv.difficulty, deckType: _deckType,
+                srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
+              )).toList();
         case _DeckType.phrasalVerbsDifficult:
           final all = await ref.read(phrasalVerbRepositoryProvider).getAll();
-          final filtered = all.where((pv) => pv.status == 'difficult').toList()
-            ..shuffle();
-          cards = filtered
+          cards = (all.where((pv) => pv.status == 'difficult').toList()..shuffle())
               .map((pv) => _FlashCard(
-                    id: pv.id!,
-                    front: pv.verb,
-                    back: pv.meaningPt ?? pv.meaning,
-                    meaningEn: pv.meaningEn,
-                    example1: pv.example1,
-                    difficulty: pv.difficulty,
-                    deckType: _deckType,
-                    srInterval: pv.srInterval,
-                    easeFactor: pv.easeFactor,
-                    srRepetitions: pv.srRepetitions,
-                  ))
-              .toList();
+                id: pv.id!, front: pv.verb, back: pv.meaningPt ?? pv.meaning,
+                meaningEn: pv.meaningEn, example1: pv.example1, example2: pv.example2, example3: pv.example3,
+                difficulty: pv.difficulty, deckType: _deckType,
+                srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
+              )).toList();
+        case _DeckType.phrasalVerbsAll:
+          final all = await ref.read(phrasalVerbRepositoryProvider).getAll();
+          cards = (all..shuffle()).map((pv) => _FlashCard(
+                id: pv.id!, front: pv.verb, back: pv.meaningPt ?? pv.meaning,
+                meaningEn: pv.meaningEn, example1: pv.example1, example2: pv.example2, example3: pv.example3,
+                difficulty: pv.difficulty, deckType: _deckType,
+                srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
+              )).toList();
         case _DeckType.phrasesDue:
-          final phrases = await ref.read(phraseRepositoryProvider).getDue();
-          cards = phrases
-              .map((p) => _FlashCard(
-                    id: p.id!,
-                    front: p.phrase,
-                    back: p.translation,
-                    meaningEn: p.meaningEn,
-                    example1: p.example1,
-                    difficulty: p.difficulty,
-                    deckType: _deckType,
-                    srInterval: p.srInterval,
-                    easeFactor: p.easeFactor,
-                    srRepetitions: p.srRepetitions,
-                  ))
-              .toList();
+          final phrases = await ref.read(phraseRepositoryProvider).getAll();
+          cards = (phrases..shuffle()).map((p) => _FlashCard(
+                id: p.id!, front: p.phrase, back: p.translation,
+                meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
+                difficulty: p.difficulty, deckType: _deckType,
+                srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
+              )).toList();
         case _DeckType.phrasesDifficult:
           final all = await ref.read(phraseRepositoryProvider).getAll();
-          final filtered = all.where((p) => p.status == 'difficult').toList()
-            ..shuffle();
-          cards = filtered
+          cards = (all.where((p) => p.status == 'difficult').toList()..shuffle())
               .map((p) => _FlashCard(
-                    id: p.id!,
-                    front: p.phrase,
-                    back: p.translation,
-                    meaningEn: p.meaningEn,
-                    example1: p.example1,
-                    difficulty: p.difficulty,
-                    deckType: _deckType,
-                    srInterval: p.srInterval,
-                    easeFactor: p.easeFactor,
-                    srRepetitions: p.srRepetitions,
-                  ))
-              .toList();
+                id: p.id!, front: p.phrase, back: p.translation,
+                meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
+                difficulty: p.difficulty, deckType: _deckType,
+                srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
+              )).toList();
+        case _DeckType.phrasesAll:
+          final all = await ref.read(phraseRepositoryProvider).getAll();
+          cards = (all..shuffle()).map((p) => _FlashCard(
+                id: p.id!, front: p.phrase, back: p.translation,
+                meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
+                difficulty: p.difficulty, deckType: _deckType,
+                srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
+              )).toList();
       }
 
       if (cards.isEmpty) return;
@@ -190,6 +165,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     switch (card.deckType) {
       case _DeckType.wordsDue:
       case _DeckType.wordsDifficult:
+      case _DeckType.wordsAll:
         final repo = ref.read(wordRepositoryProvider);
         final word = await repo.getById(card.id);
         if (word != null) {
@@ -197,6 +173,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
         }
       case _DeckType.phrasalVerbsDue:
       case _DeckType.phrasalVerbsDifficult:
+      case _DeckType.phrasalVerbsAll:
         final repo = ref.read(phrasalVerbRepositoryProvider);
         final pv = await repo.getById(card.id);
         if (pv != null) {
@@ -204,6 +181,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
         }
       case _DeckType.phrasesDue:
       case _DeckType.phrasesDifficult:
+      case _DeckType.phrasesAll:
         final repo = ref.read(phraseRepositoryProvider);
         final p = await repo.getById(card.id);
         if (p != null) {
@@ -243,6 +221,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     switch (card.deckType) {
       case _DeckType.wordsDue:
       case _DeckType.wordsDifficult:
+      case _DeckType.wordsAll:
         await ref.read(wordRepositoryProvider).updateSM2(
               card.id,
               nextReviewAt: result.nextReviewAt,
@@ -252,6 +231,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             );
       case _DeckType.phrasalVerbsDue:
       case _DeckType.phrasalVerbsDifficult:
+      case _DeckType.phrasalVerbsAll:
         await ref.read(phrasalVerbRepositoryProvider).updateSM2(
               card.id,
               nextReviewAt: result.nextReviewAt,
@@ -261,6 +241,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             );
       case _DeckType.phrasesDue:
       case _DeckType.phrasesDifficult:
+      case _DeckType.phrasesAll:
         await ref.read(phraseRepositoryProvider).updateSM2(
               card.id,
               nextReviewAt: result.nextReviewAt,
@@ -350,14 +331,21 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final phrasesDueCount = ref.watch(duePhrasesCountProvider).valueOrNull ?? 0;
     final phrasesDifficultCount = allPhrases.where((p) => p.status == 'difficult').length;
 
+    final allWordsCount = allWords.length;
+    final allPVCount = allPV.length;
+    final allPhrasesCount = allPhrases.length;
+
     int selectedCount() {
       switch (_deckType) {
         case _DeckType.wordsDue: return wordsDueCount;
         case _DeckType.wordsDifficult: return wordsDifficultCount;
+        case _DeckType.wordsAll: return allWordsCount;
         case _DeckType.phrasalVerbsDue: return pvDueCount;
         case _DeckType.phrasalVerbsDifficult: return pvDifficultCount;
+        case _DeckType.phrasalVerbsAll: return allPVCount;
         case _DeckType.phrasesDue: return phrasesDueCount;
         case _DeckType.phrasesDifficult: return phrasesDifficultCount;
+        case _DeckType.phrasesAll: return allPhrasesCount;
       }
     }
 
@@ -412,6 +400,16 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 onTap: () => setState(() => _deckType = _DeckType.wordsDifficult),
                 accentColor: AppTheme.error,
               ),
+              const SizedBox(height: 10),
+              _DeckCard(
+                icon: '📚',
+                label: 'All Words',
+                subtitle: 'Review your entire dictionary',
+                count: allWordsCount,
+                selected: _deckType == _DeckType.wordsAll,
+                onTap: () => setState(() => _deckType = _DeckType.wordsAll),
+                accentColor: AppTheme.secondary,
+              ),
               const SizedBox(height: 20),
               _sectionLabel(context, 'PHRASAL VERBS'),
               const SizedBox(height: 8),
@@ -433,6 +431,16 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 onTap: () => setState(() => _deckType = _DeckType.phrasalVerbsDifficult),
                 accentColor: AppTheme.error,
               ),
+              const SizedBox(height: 10),
+              _DeckCard(
+                icon: '📚',
+                label: 'All Phrasal Verbs',
+                subtitle: 'Review all phrasal verbs',
+                count: allPVCount,
+                selected: _deckType == _DeckType.phrasalVerbsAll,
+                onTap: () => setState(() => _deckType = _DeckType.phrasalVerbsAll),
+                accentColor: AppTheme.secondary,
+              ),
               const SizedBox(height: 20),
               _sectionLabel(context, 'DAILY PHRASES'),
               const SizedBox(height: 8),
@@ -453,6 +461,16 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 selected: _deckType == _DeckType.phrasesDifficult,
                 onTap: () => setState(() => _deckType = _DeckType.phrasesDifficult),
                 accentColor: AppTheme.error,
+              ),
+              const SizedBox(height: 10),
+              _DeckCard(
+                icon: '📚',
+                label: 'All Phrases',
+                subtitle: 'Review all daily expressions',
+                count: allPhrasesCount,
+                selected: _deckType == _DeckType.phrasesAll,
+                onTap: () => setState(() => _deckType = _DeckType.phrasesAll),
+                accentColor: AppTheme.secondary,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -491,19 +509,50 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   // Studying phase
   // ---------------------------------------------------------------------------
 
+  void _goBack() {
+    if (_currentIndex == 0) return;
+    setState(() {
+      _answers.remove(_currentIndex - 1);
+      _currentIndex--;
+      _isFlipped = false;
+    });
+  }
+
   Widget _buildStudying(BuildContext context) {
     final card = _session[_currentIndex];
     final progress = (_currentIndex + 1) / _session.length;
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
+                  if (_currentIndex > 0)
+                    GestureDetector(
+                      onTap: _goBack,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_back_ios_rounded, size: 14,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          Text(
+                            'Anterior',
+                            style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 8),
+                  const Spacer(),
                   Text(
                     'Card ${_currentIndex + 1} of ${_session.length}',
                     style: GoogleFonts.nunito(
@@ -551,7 +600,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                     ),
                   ),
                 ),
-              const Spacer(),
+              const SizedBox(height: 16),
               Center(
                 child: TextButton.icon(
                   onPressed: _markAsLearned,
@@ -704,8 +753,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   }
 
   Widget _buildCardBack(BuildContext context, _FlashCard card) {
+    final examples = [card.example1, card.example2, card.example3]
+        .whereType<String>()
+        .where((e) => e.isNotEmpty)
+        .toList();
+
     return Container(
-      height: 280,
+      constraints: const BoxConstraints(minHeight: 200),
       decoration: BoxDecoration(
         color: AppTheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
@@ -718,47 +772,80 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Translation
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    card.back,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.nunito(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.secondary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.volume_up_rounded, size: 20),
+                  color: AppTheme.primary,
+                  tooltip: 'Ouvir frase',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () => ref.read(audioServiceProvider).speak(card.front),
+                ),
+              ],
+            ),
             if (card.meaningEn != null) ...[
+              const SizedBox(height: 8),
               Text(
                 card.meaningEn!,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.nunito(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 16),
             ],
-            if (card.example1 != null) ...[
-              Text(
-                card.example1!,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+            if (examples.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 4),
+              ...examples.map((ex) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ex,
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.volume_up_rounded, size: 18),
+                      color: AppTheme.tertiary,
+                      tooltip: 'Ouvir exemplo',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      onPressed: () => ref.read(audioServiceProvider).speak(ex),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
+              )),
             ],
-            const Divider(),
-            const SizedBox(height: 16),
-            Text(
-              card.back,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.secondary,
-              ),
-            ),
           ],
         ),
       ),
