@@ -196,84 +196,88 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
                 ),
               ),
-              const SizedBox(height: 24),
-              _StatsCard(wordCount: wordCount, stats: stats),
-              const SizedBox(height: 24),
-              Text(
-                'MY LIBRARY',
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  letterSpacing: 1.2,
+              if (_searchQuery.isNotEmpty)
+                _GlobalSearchBody(query: _searchQuery)
+              else ...[
+                const SizedBox(height: 24),
+                _StatsCard(wordCount: wordCount, stats: stats),
+                const SizedBox(height: 24),
+                Text(
+                  'MY LIBRARY',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.9,
-                children: [
-                  _GridMenuButton(
-                    label: 'Words',
-                    description: 'Your dictionary',
-                    icon: Icons.menu_book_rounded,
-                    color: AppTheme.secondary,
-                    onTap: () => context.push('/words'),
-                  ),
-                  _GridMenuButton(
-                    label: 'Phrasal Verbs',
-                    description: 'Idioms & verbs',
-                    icon: Icons.auto_stories_rounded,
-                    color: AppTheme.tertiary,
-                    onTap: () => context.push('/phrasal-verbs'),
-                  ),
-                  _GridMenuButton(
-                    label: 'Phrases',
-                    description: 'Daily expressions',
-                    icon: Icons.format_quote_rounded,
-                    color: AppTheme.secondary,
-                    onTap: () => context.push('/phrases'),
-                  ),
-                  _GridMenuButton(
-                    label: 'Diary',
-                    description: 'Writing practice',
-                    icon: Icons.edit_note_rounded,
-                    color: AppTheme.primary,
-                    onTap: () => context.push('/diary'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'STUDY & PLAY',
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  letterSpacing: 1.2,
+                const SizedBox(height: 12),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.9,
+                  children: [
+                    _GridMenuButton(
+                      label: 'Words',
+                      description: 'Your dictionary',
+                      icon: Icons.menu_book_rounded,
+                      color: AppTheme.secondary,
+                      onTap: () => context.push('/words'),
+                    ),
+                    _GridMenuButton(
+                      label: 'Phrasal Verbs',
+                      description: 'Idioms & verbs',
+                      icon: Icons.auto_stories_rounded,
+                      color: AppTheme.tertiary,
+                      onTap: () => context.push('/phrasal-verbs'),
+                    ),
+                    _GridMenuButton(
+                      label: 'Phrases',
+                      description: 'Daily expressions',
+                      icon: Icons.format_quote_rounded,
+                      color: AppTheme.secondary,
+                      onTap: () => context.push('/phrases'),
+                    ),
+                    _GridMenuButton(
+                      label: 'Diary',
+                      description: 'Writing practice',
+                      icon: Icons.edit_note_rounded,
+                      color: AppTheme.primary,
+                      onTap: () => context.push('/diary'),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              _StudyCard(
-                label: 'Flashcards',
-                subtitle: 'Spaced repetition study',
-                icon: Icons.style_rounded,
-                color: AppTheme.secondary,
-                onTap: () => context.push('/flashcards'),
-              ),
-              const SizedBox(height: 12),
-              _StudyCard(
-                label: 'Mini-Games',
-                subtitle: 'Quick practice sessions',
-                icon: Icons.games_rounded,
-                color: AppTheme.primary,
-                onTap: () => context.push('/games'),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+                Text(
+                  'STUDY & PLAY',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _StudyCard(
+                  label: 'Flashcards',
+                  subtitle: 'Spaced repetition study',
+                  icon: Icons.style_rounded,
+                  color: AppTheme.secondary,
+                  onTap: () => context.push('/flashcards'),
+                ),
+                const SizedBox(height: 12),
+                _StudyCard(
+                  label: 'Mini-Games',
+                  subtitle: 'Quick practice sessions',
+                  icon: Icons.games_rounded,
+                  color: AppTheme.primary,
+                  onTap: () => context.push('/games'),
+                ),
+                const SizedBox(height: 24),
+              ],
             ],
           ),
         ),
@@ -500,6 +504,157 @@ class _StudyCard extends StatelessWidget {
           ),
         ) : null,
         trailing: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}
+
+class _GlobalSearchBody extends ConsumerWidget {
+  final String query;
+  const _GlobalSearchBody({required this.query});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(globalSearchProvider(query));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: Text('Error: $e')),
+      ),
+      data: (results) {
+        if (results.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: Text(
+                'No results found',
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            if (results.words.isNotEmpty) ...[
+              _SearchSectionHeader(label: 'Words'),
+              ...results.words.map((w) => _SearchResultTile(
+                    title: w.word,
+                    subtitle: w.translation,
+                    typeLabel: 'Word',
+                    typeColor: AppTheme.secondary,
+                    onTap: () => context.push('/words/${w.id}'),
+                  )),
+              const SizedBox(height: 16),
+            ],
+            if (results.phrasalVerbs.isNotEmpty) ...[
+              _SearchSectionHeader(label: 'Phrasal Verbs'),
+              ...results.phrasalVerbs.map((pv) => _SearchResultTile(
+                    title: pv.verb,
+                    subtitle: pv.meaningPt ?? pv.meaning,
+                    typeLabel: 'Phrasal Verb',
+                    typeColor: AppTheme.tertiary,
+                    onTap: () => context.push('/phrasal-verbs/${pv.id}'),
+                  )),
+              const SizedBox(height: 16),
+            ],
+            if (results.phrases.isNotEmpty) ...[
+              _SearchSectionHeader(label: 'Phrases'),
+              ...results.phrases.map((p) => _SearchResultTile(
+                    title: p.phrase,
+                    subtitle: p.translation,
+                    typeLabel: 'Phrase',
+                    typeColor: AppTheme.primary,
+                    onTap: () => context.push('/phrases/${p.id}'),
+                  )),
+              const SizedBox(height: 16),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SearchSectionHeader extends StatelessWidget {
+  final String label;
+  const _SearchSectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label.toUpperCase(),
+        style: GoogleFonts.nunito(
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchResultTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String typeLabel;
+  final Color typeColor;
+  final VoidCallback onTap;
+
+  const _SearchResultTile({
+    required this.title,
+    required this.subtitle,
+    required this.typeLabel,
+    required this.typeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(
+          title,
+          style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: GoogleFonts.nunito(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: typeColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            typeLabel,
+            style: GoogleFonts.nunito(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: typeColor,
+            ),
+          ),
+        ),
       ),
     );
   }
