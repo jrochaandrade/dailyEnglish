@@ -22,43 +22,48 @@ class WordRepository {
   Future<List<Word>> search(String query) async {
     final words = await getAll();
     if (query.trim().isEmpty) return words;
-    
-    final normalizedQuery = _removeDiacritics(query.toLowerCase().trim());
-    
-    return words.where((w) {
+
+    final q = _removeDiacritics(query.toLowerCase().trim());
+
+    // Returns relevance score > 0 if the word matches, 0 if it doesn't.
+    // Higher score = shown first.
+    //
+    // Reverse-contains (query contains dict entry) only applies to the English
+    // word field — otherwise short Portuguese words like "urso" falsely match
+    // unrelated words that happen to contain "urso" as a substring (e.g. "concurso").
+    int score(Word w) {
       final nWord = _removeDiacritics(w.word.toLowerCase().trim());
-      final nTrans = _removeDiacritics(w.translation.toLowerCase().trim());
-      final nTrans2 = _removeDiacritics((w.translation2 ?? '').toLowerCase().trim());
-      final nTrans3 = _removeDiacritics((w.translation3 ?? '').toLowerCase().trim());
-      
-      bool isMatch(String dictStr) {
-        if (dictStr.isEmpty) return false;
-        if (dictStr.contains(normalizedQuery)) return true;
-        if (dictStr.length >= 3 && normalizedQuery.contains(dictStr)) return true;
-        if (dictStr == normalizedQuery) return true;
-        
-        // Fuzzy plural/conjugation match: e.g. "por volta de" vs "por volta das"
-        if (dictStr.length > 4 && normalizedQuery.length > 4) {
-          int minLen = dictStr.length < normalizedQuery.length ? dictStr.length : normalizedQuery.length;
-          int prefixMatchLen = 0;
-          for (int i = 0; i < minLen; i++) {
-            if (dictStr[i] == normalizedQuery[i]) {
-              prefixMatchLen++;
-            } else {
-              break;
-            }
-          }
-          // If the prefix matches the entire shorter string except the last 1 or 2 characters
-          if (prefixMatchLen >= minLen - 2 && prefixMatchLen >= 4) {
-            return true;
-          }
+
+      if (nWord == q) return 4;
+      if (nWord.contains(q)) return 3;
+      // Conjugation/plural match — English only (e.g. "studying" → finds "study")
+      if (nWord.length >= 3 && q.contains(nWord)) return 2;
+      // Fuzzy prefix match — English only
+      if (nWord.length > 4 && q.length > 4) {
+        final minLen = nWord.length < q.length ? nWord.length : q.length;
+        int prefix = 0;
+        for (int i = 0; i < minLen; i++) {
+          if (nWord[i] == q[i]) { prefix++; } else { break; }
         }
-        
-        return false;
+        if (prefix >= minLen - 2 && prefix >= 4) return 1;
       }
 
-      return isMatch(nWord) || isMatch(nTrans) || isMatch(nTrans2) || isMatch(nTrans3);
-    }).toList();
+      // Translation fields: exact match or translation contains the query only.
+      // No reverse-contains here to avoid false positives.
+      for (final raw in [w.translation, w.translation2 ?? '', w.translation3 ?? '']) {
+        if (raw.isEmpty) continue;
+        final nT = _removeDiacritics(raw.toLowerCase().trim());
+        if (nT == q || nT.contains(q)) return 1;
+      }
+
+      return 0;
+    }
+
+    final scores = <Word, int>{for (final w in words) w: score(w)};
+    return words
+        .where((w) => scores[w]! > 0)
+        .toList()
+      ..sort((a, b) => scores[b]!.compareTo(scores[a]!));
   }
 
   String _removeDiacritics(String str) {
