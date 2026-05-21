@@ -267,7 +267,7 @@ class _SkillGroup extends StatelessWidget {
                               .onSurfaceVariant)),
                 ),
               ]
-            : sessions.map((s) => _SessionTile(session: s)).toList(),
+            : sessions.map((s) => _SessionTile(key: ValueKey(s.id), session: s)).toList(),
       ),
     );
   }
@@ -275,7 +275,7 @@ class _SkillGroup extends StatelessWidget {
 
 class _SessionTile extends ConsumerWidget {
   final StudySession session;
-  const _SessionTile({required this.session});
+  const _SessionTile({super.key, required this.session});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -323,6 +323,8 @@ class _SessionTile extends ConsumerWidget {
                 builder: (_) => StudySessionForm(initialSession: session),
               );
             case _SessionAction.delete:
+              final id = session.id;
+              if (id == null) return;
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -342,7 +344,7 @@ class _SessionTile extends ConsumerWidget {
               if (confirmed == true && context.mounted) {
                 ref
                     .read(studySessionListProvider.notifier)
-                    .deleteSession(session.id!);
+                    .deleteSession(id);
               }
           }
         },
