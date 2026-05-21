@@ -221,7 +221,7 @@ class _SessionTile extends ConsumerWidget {
     final durationStr = h > 0 ? '${h}h ${m}m' : '${m}m';
 
     return Dismissible(
-      key: ValueKey(session.id),
+      key: ValueKey(session.id!),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -230,10 +230,11 @@ class _SessionTile extends ConsumerWidget {
         child: const Icon(Icons.delete_rounded, color: Colors.white),
       ),
       onDismissed: (_) {
+        final messenger = ScaffoldMessenger.of(context);
         ref
             .read(studySessionListProvider.notifier)
             .deleteSession(session.id!);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Session deleted.')),
         );
       },
