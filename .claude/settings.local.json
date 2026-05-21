@@ -36,7 +36,12 @@
       "Bash(python -c \"from PIL import Image; print\\('PIL ok'\\)\")",
       "Bash(python)",
       "Bash(dart run *)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(mkdir -p \"c:/Programacao/05 - Projects/daily_english/docs/superpowers/specs\")",
+      "Bash(git stash *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Programacao\\05 - Projects\\daily_english\\docs\\superpowers\\specs"
     ]
   }
 }
