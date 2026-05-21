@@ -11,8 +11,10 @@ import '../../core/services/backup_service.dart';
 import '../../core/services/google_drive_service.dart';
 import 'dart:async';
 import '../../providers/global_search_provider.dart';
+import '../../providers/study_session_provider.dart';
+import '../../screens/study/study_session_form.dart';
 
-enum _HomeMenuItem { categories, exportBackup, importBackup, backupToDrive, restoreFromDrive }
+enum _HomeMenuItem { categories, studyLog, exportBackup, importBackup, backupToDrive, restoreFromDrive }
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -110,6 +112,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       switch (item) {
                         case _HomeMenuItem.categories:
                           context.push('/categories');
+                        case _HomeMenuItem.studyLog:
+                          context.push('/study-log');
                         case _HomeMenuItem.exportBackup:
                           ref.read(backupServiceProvider).exportBackup(context);
                         case _HomeMenuItem.importBackup:
@@ -126,6 +130,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: ListTile(
                           leading: Icon(Icons.label_rounded),
                           title: Text('Categories'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: _HomeMenuItem.studyLog,
+                        child: ListTile(
+                          leading: Icon(Icons.school_rounded),
+                          title: Text('Study Log'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -275,6 +287,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   icon: Icons.games_rounded,
                   color: AppTheme.primary,
                   onTap: () => context.push('/games'),
+                ),
+                const SizedBox(height: 24),
+                _StudySummaryCard(),
+                const SizedBox(height: 12),
+                _StudyCard(
+                  label: 'Register Study',
+                  subtitle: 'Log a study session',
+                  icon: Icons.add_task_rounded,
+                  color: AppTheme.primary,
+                  onTap: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(24))),
+                    builder: (_) => const StudySessionForm(),
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -654,6 +683,77 @@ class _SearchResultTile extends StatelessWidget {
               color: typeColor,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudySummaryCard extends ConsumerWidget {
+  const _StudySummaryCard();
+
+  String _fmt(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h == 0) return '${m}m';
+    if (m == 0) return '${h}h';
+    return '${h}h ${m}m';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(studyStatsProvider);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Study Progress',
+                          style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
+                      Text(_fmt(stats.totalMinutes),
+                          style: GoogleFonts.nunito(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(stats.estimatedLevel,
+                      style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primary)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'L ${_fmt(stats.listeningMinutes)}  ·  R ${_fmt(stats.readingMinutes)}  ·  W ${_fmt(stats.writingMinutes)}  ·  S ${_fmt(stats.speakingMinutes)}',
+              style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700),
+            ),
+          ],
         ),
       ),
     );
