@@ -6,22 +6,37 @@ import '../../providers/study_session_provider.dart';
 import '../../core/theme/app_theme.dart';
 
 class StudySessionForm extends ConsumerStatefulWidget {
-  const StudySessionForm({super.key});
+  final StudySession? initialSession;
+  const StudySessionForm({super.key, this.initialSession});
 
   @override
   ConsumerState<StudySessionForm> createState() => _StudySessionFormState();
 }
 
 class _StudySessionFormState extends ConsumerState<StudySessionForm> {
-  StudyType? _selectedType;
-  final _durationController = TextEditingController();
-  final _activityController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
+  late StudyType? _selectedType;
+  late TimeOfDay? _selectedDuration;
+  late final TextEditingController _activityController;
+  late DateTime _selectedDate;
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    final s = widget.initialSession;
+    _selectedType = s?.type;
+    _selectedDuration = s != null
+        ? TimeOfDay(
+            hour: s.durationMinutes ~/ 60,
+            minute: s.durationMinutes % 60,
+          )
+        : null;
+    _selectedDate = s != null ? DateTime.parse(s.date) : DateTime.now();
+    _activityController = TextEditingController(text: s?.activity ?? '');
+  }
+
+  @override
   void dispose() {
-    _durationController.dispose();
     _activityController.dispose();
     super.dispose();
   }
@@ -39,24 +54,50 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
+  String _formatDuration(TimeOfDay t) {
+    if (t.hour == 0) return '${t.minute}m';
+    if (t.minute == 0) return '${t.hour}h';
+    return '${t.hour}h ${t.minute}m';
+  }
+
+  Future<void> _pickDuration() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedDuration ?? const TimeOfDay(hour: 0, minute: 30),
+      helpText: 'Select duration',
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedDuration = picked);
+  }
+
   Future<void> _save() async {
     final type = _selectedType;
-    final minutes = int.tryParse(_durationController.text.trim());
-    if (type == null || minutes == null || minutes <= 0) return;
+    final d = _selectedDuration;
+    final minutes = d != null ? d.hour * 60 + d.minute : 0;
+    if (type == null || d == null || minutes <= 0) return;
 
     setState(() => _saving = true);
     try {
       final session = StudySession(
+        id: widget.initialSession?.id,
         type: type,
         durationMinutes: minutes,
-        date:
-            '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+        date: '${_selectedDate.year}-'
+            '${_selectedDate.month.toString().padLeft(2, '0')}-'
+            '${_selectedDate.day.toString().padLeft(2, '0')}',
         activity: _activityController.text.trim().isEmpty
             ? null
             : _activityController.text.trim(),
-        createdAt: DateTime.now(),
+        createdAt: widget.initialSession?.createdAt ?? DateTime.now(),
       );
-      await ref.read(studySessionListProvider.notifier).addSession(session);
+      if (widget.initialSession != null) {
+        await ref.read(studySessionListProvider.notifier).updateSession(session);
+      } else {
+        await ref.read(studySessionListProvider.notifier).addSession(session);
+      }
       if (mounted) Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -65,6 +106,7 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.initialSession != null;
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -77,7 +119,7 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Register Study',
+            isEdit ? 'Edit Session' : 'Register Study',
             style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 20),
@@ -105,13 +147,27 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _durationController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Duration (minutes)',
-              labelStyle: GoogleFonts.nunito(),
-              border: const OutlineInputBorder(),
+          InkWell(
+            onTap: _pickDuration,
+            borderRadius: BorderRadius.circular(8),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Duration',
+                labelStyle: GoogleFonts.nunito(),
+                border: const OutlineInputBorder(),
+                suffixIcon: const Icon(Icons.timer_rounded),
+              ),
+              child: Text(
+                _selectedDuration != null
+                    ? _formatDuration(_selectedDuration!)
+                    : 'Tap to select',
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  color: _selectedDuration != null
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
