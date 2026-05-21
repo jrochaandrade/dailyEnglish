@@ -42,12 +42,13 @@ class MockTestTargets {
   }
 
   bool isReached(double listening, double reading, double writing, double speaking) {
+    double round(double v) => (v * 2).round() / 2;
     final avg = (listening + reading + writing + speaking) / 4;
-    final rounded = (avg * 2).round() / 2;
+    final rounded = round(avg);
     return rounded >= overallTarget &&
-        listening >= listeningMin &&
-        reading   >= readingMin &&
-        writing   >= writingMin &&
-        speaking  >= speakingMin;
+        round(listening) >= listeningMin &&
+        round(reading)   >= readingMin &&
+        round(writing)   >= writingMin &&
+        round(speaking)  >= speakingMin;
   }
 }

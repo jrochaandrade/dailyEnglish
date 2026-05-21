@@ -23,12 +23,14 @@ class MockTest {
     return MockTest(
       id: map['id'] as int?,
       date: map['date'] as String,
-      listeningScore: (map['listening_score'] as num).toDouble(),
-      readingScore: (map['reading_score'] as num).toDouble(),
-      writingScore: (map['writing_score'] as num).toDouble(),
-      speakingScore: (map['speaking_score'] as num).toDouble(),
+      listeningScore: (map['listening_score'] as num?)?.toDouble() ?? 0.0,
+      readingScore: (map['reading_score'] as num?)?.toDouble() ?? 0.0,
+      writingScore: (map['writing_score'] as num?)?.toDouble() ?? 0.0,
+      speakingScore: (map['speaking_score'] as num?)?.toDouble() ?? 0.0,
       reachedTarget: (map['reached_target'] as int) == 1,
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
