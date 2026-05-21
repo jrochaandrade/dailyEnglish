@@ -21,6 +21,7 @@ import '../../screens/games/fill_blank_screen.dart';
 import '../../screens/games/sentence_scramble_screen.dart';
 import '../../screens/games/english_quest_screen.dart';
 import '../../screens/games/game_content.dart';
+import '../../screens/study/study_log_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -166,6 +167,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/games/quest',
       builder: (context, state) => const EnglishQuestScreen(),
+    ),
+    GoRoute(
+      path: '/study-log',
+      builder: (context, state) => const StudyLogScreen(),
     ),
   ],
 );
