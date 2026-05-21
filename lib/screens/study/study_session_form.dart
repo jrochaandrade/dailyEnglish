@@ -45,18 +45,22 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
     if (type == null || minutes == null || minutes <= 0) return;
 
     setState(() => _saving = true);
-    final session = StudySession(
-      type: type,
-      durationMinutes: minutes,
-      date:
-          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
-      activity: _activityController.text.trim().isEmpty
-          ? null
-          : _activityController.text.trim(),
-      createdAt: DateTime.now(),
-    );
-    await ref.read(studySessionListProvider.notifier).addSession(session);
-    if (mounted) Navigator.of(context).pop();
+    try {
+      final session = StudySession(
+        type: type,
+        durationMinutes: minutes,
+        date:
+            '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+        activity: _activityController.text.trim().isEmpty
+            ? null
+            : _activityController.text.trim(),
+        createdAt: DateTime.now(),
+      );
+      await ref.read(studySessionListProvider.notifier).addSession(session);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
