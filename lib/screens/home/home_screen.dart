@@ -753,6 +753,13 @@ class _StudySummaryCard extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700),
             ),
+            Text(
+              'Mock tests: —',
+              style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700),
+            ),
           ],
         ),
       ),
