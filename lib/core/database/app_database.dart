@@ -19,7 +19,7 @@ class AppDatabase {
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
-    return openDatabase(path, version: 13, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path, version: 14, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -147,6 +147,17 @@ class AppDatabase {
       'id': 1, 'xp': 0, 'level': 1, 'streak': 0, 'shields': 0,
       'streak_at_risk': 0, 'games_played_today': '',
     });
+
+    await db.execute('''
+      CREATE TABLE study_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        activity TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -276,6 +287,18 @@ class AppDatabase {
     }
     if (oldVersion < 13) {
       try { await db.execute('ALTER TABLE diary_entries ADD COLUMN comments TEXT'); } catch (_) {}
+    }
+    if (oldVersion < 14) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS study_sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL,
+          duration_minutes INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          activity TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 }
