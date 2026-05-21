@@ -23,6 +23,7 @@ dependencies:
   flame_tiled: ^3.0.11
   google_sign_in: ^6.2.1
   googleapis: ^13.2.0
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:
