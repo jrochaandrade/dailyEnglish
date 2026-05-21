@@ -22,6 +22,11 @@ class StudySessionListNotifier extends AsyncNotifier<List<StudySession>> {
     await ref.read(studySessionRepositoryProvider).delete(id);
     ref.invalidateSelf();
   }
+
+  Future<void> updateSession(StudySession session) async {
+    await ref.read(studySessionRepositoryProvider).update(session);
+    ref.invalidateSelf();
+  }
 }
 
 final studySessionListProvider =

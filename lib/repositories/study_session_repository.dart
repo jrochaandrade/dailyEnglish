@@ -21,4 +21,14 @@ class StudySessionRepository {
     final db = await _futureDb;
     await db.delete('study_sessions', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<void> update(StudySession session) async {
+    final db = await _futureDb;
+    await db.update(
+      'study_sessions',
+      session.toMap(),
+      where: 'id = ?',
+      whereArgs: [session.id],
+    );
+  }
 }
