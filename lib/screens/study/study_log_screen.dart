@@ -197,15 +197,15 @@ class _MockStat extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(value,
-              style: GoogleFonts.nunito(
-                  fontSize: 14, fontWeight: FontWeight.w900)),
           Text(label,
               style: GoogleFonts.nunito(
                   fontSize: 10,
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center),
+          Text(value,
+              style: GoogleFonts.nunito(
+                  fontSize: 14, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -258,10 +258,8 @@ class _SkillGroup extends StatelessWidget {
         ),
         children: sessions.isEmpty
             ? [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  child: Text('No sessions yet.',
+                ListTile(
+                  title: Text('No sessions yet.',
                       style: GoogleFonts.nunito(
                           fontSize: 13,
                           color: Theme.of(context)
@@ -328,7 +326,7 @@ class _SessionTile extends ConsumerWidget {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Delete session?'),
+                  title: const Text('Delete this session?'),
                   content: const Text('This cannot be undone.'),
                   actions: [
                     TextButton(
