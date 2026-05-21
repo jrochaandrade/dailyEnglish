@@ -19,7 +19,7 @@ class AppDatabase {
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
-    return openDatabase(path, version: 14, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path, version: 15, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -155,6 +155,19 @@ class AppDatabase {
         duration_minutes INTEGER NOT NULL,
         date TEXT NOT NULL,
         activity TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE mock_tests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        listening_score REAL NOT NULL,
+        reading_score REAL NOT NULL,
+        writing_score REAL NOT NULL,
+        speaking_score REAL NOT NULL,
+        reached_target INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');
@@ -296,6 +309,20 @@ class AppDatabase {
           duration_minutes INTEGER NOT NULL,
           date TEXT NOT NULL,
           activity TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 15) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS mock_tests (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          listening_score REAL NOT NULL,
+          reading_score REAL NOT NULL,
+          writing_score REAL NOT NULL,
+          speaking_score REAL NOT NULL,
+          reached_target INTEGER NOT NULL DEFAULT 0,
           created_at TEXT NOT NULL
         )
       ''');
