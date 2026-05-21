@@ -7,6 +7,8 @@ import '../../providers/study_session_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'study_session_form.dart';
 
+enum _SessionAction { edit, delete }
+
 class StudyLogScreen extends ConsumerWidget {
   const StudyLogScreen({super.key});
 
@@ -36,48 +38,24 @@ class StudyLogScreen extends ConsumerWidget {
       body: sessionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => const Center(child: Text('Error loading sessions.')),
-        data: (sessions) => CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _StatsHeader(stats: stats)),
-            if (sessions.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.school_rounded,
-                          size: 80, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      Text('No study sessions yet.',
-                          style: GoogleFonts.nunito(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant)),
-                      const SizedBox(height: 8),
-                      Text("Tap + to register your first session.",
-                          style: GoogleFonts.nunito(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-              )
-            else
+        data: (sessions) {
+          final grouped = <StudyType, List<StudySession>>{
+            for (final t in StudyType.values)
+              t: sessions.where((s) => s.type == t).toList(),
+          };
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _StatsHeader(stats: stats)),
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final session = sessions[index];
-                    return _SessionTile(session: session);
-                  },
-                  childCount: sessions.length,
-                ),
+                delegate: SliverChildListDelegate([
+                  for (final type in StudyType.values)
+                    _SkillGroup(type: type, sessions: grouped[type]!),
+                  const SizedBox(height: 80),
+                ]),
               ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -152,6 +130,22 @@ class _StatsHeader extends StatelessWidget {
                 _SkillStat(label: 'Speaking', minutes: stats.speakingMinutes, color: Colors.orange),
               ],
             ),
+            const Divider(height: 28),
+            Text('MOCK TESTS',
+                style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 1.2)),
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                _MockStat(label: 'Done', value: '—'),
+                _MockStat(label: 'Positive', value: '—'),
+                _MockStat(label: 'Rate', value: '—'),
+                _MockStat(label: 'Book test?', value: '—'),
+              ],
+            ),
           ],
         ),
       ),
@@ -163,7 +157,8 @@ class _SkillStat extends StatelessWidget {
   final String label;
   final int minutes;
   final Color color;
-  const _SkillStat({required this.label, required this.minutes, required this.color});
+  const _SkillStat(
+      {required this.label, required this.minutes, required this.color});
 
   String _fmt(int m) {
     final h = m ~/ 60;
@@ -180,9 +175,7 @@ class _SkillStat extends StatelessWidget {
         children: [
           Text(_fmt(minutes),
               style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: color)),
+                  fontSize: 14, fontWeight: FontWeight.w900, color: color)),
           Text(label,
               style: GoogleFonts.nunito(
                   fontSize: 10,
@@ -194,9 +187,34 @@ class _SkillStat extends StatelessWidget {
   }
 }
 
-class _SessionTile extends ConsumerWidget {
-  final StudySession session;
-  const _SessionTile({required this.session});
+class _MockStat extends StatelessWidget {
+  final String label;
+  final String value;
+  const _MockStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: GoogleFonts.nunito(
+                  fontSize: 14, fontWeight: FontWeight.w900)),
+          Text(label,
+              style: GoogleFonts.nunito(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkillGroup extends StatelessWidget {
+  final StudyType type;
+  final List<StudySession> sessions;
 
   static const _typeIcons = {
     StudyType.listening: Icons.headphones_rounded,
@@ -212,68 +230,141 @@ class _SessionTile extends ConsumerWidget {
     StudyType.speaking: Colors.orange,
   };
 
+  const _SkillGroup({required this.type, required this.sessions});
+
+  String _fmt(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h == 0) return '${m}m';
+    if (m == 0) return '${h}h';
+    return '${h}h ${m}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _typeColors[type]!;
+    final icon = _typeIcons[type]!;
+    final totalMinutes = sessions.fold(0, (sum, s) => sum + s.durationMinutes);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: Icon(icon, color: color),
+        title: Text(
+          '${type.label}  ·  ${_fmt(totalMinutes)}',
+          style:
+              GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        children: sessions.isEmpty
+            ? [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  child: Text('No sessions yet.',
+                      style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant)),
+                ),
+              ]
+            : sessions.map((s) => _SessionTile(session: s)).toList(),
+      ),
+    );
+  }
+}
+
+class _SessionTile extends ConsumerWidget {
+  final StudySession session;
+  const _SessionTile({required this.session});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = _typeColors[session.type] ?? AppTheme.primary;
-    final icon = _typeIcons[session.type] ?? Icons.school_rounded;
     final h = session.durationMinutes ~/ 60;
     final m = session.durationMinutes % 60;
     final durationStr = h > 0 ? '${h}h ${m}m' : '${m}m';
 
-    return Dismissible(
-      key: ValueKey(session.id!),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        color: Colors.red,
-        child: const Icon(Icons.delete_rounded, color: Colors.white),
+    return ListTile(
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      title: Text(
+        durationStr,
+        style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800),
       ),
-      onDismissed: (_) {
-        final messenger = ScaffoldMessenger.of(context);
-        ref
-            .read(studySessionListProvider.notifier)
-            .deleteSession(session.id!);
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Session deleted.')),
-        );
-      },
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 22),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (session.activity != null)
+            Text(session.activity!,
+                style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color:
+                        Theme.of(context).colorScheme.onSurfaceVariant),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          Text(session.date,
+              style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ],
+      ),
+      trailing: PopupMenuButton<_SessionAction>(
+        icon: const Icon(Icons.more_vert_rounded),
+        onSelected: (action) async {
+          switch (action) {
+            case _SessionAction.edit:
+              if (!context.mounted) return;
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(24))),
+                builder: (_) => StudySessionForm(initialSession: session),
+              );
+            case _SessionAction.delete:
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete session?'),
+                  content: const Text('This cannot be undone.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Delete',
+                            style: TextStyle(color: Colors.red))),
+                  ],
+                ),
+              );
+              if (confirmed == true && context.mounted) {
+                ref
+                    .read(studySessionListProvider.notifier)
+                    .deleteSession(session.id!);
+              }
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: _SessionAction.edit,
+            child: ListTile(
+                leading: Icon(Icons.edit_rounded),
+                title: Text('Edit'),
+                contentPadding: EdgeInsets.zero),
           ),
-          title: Text(
-            '${session.type.label} · $durationStr',
-            style: GoogleFonts.nunito(
-                fontSize: 15, fontWeight: FontWeight.w800),
+          PopupMenuItem(
+            value: _SessionAction.delete,
+            child: ListTile(
+                leading: Icon(Icons.delete_rounded, color: Colors.red),
+                title: Text('Delete',
+                    style: TextStyle(color: Colors.red)),
+                contentPadding: EdgeInsets.zero),
           ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (session.activity != null)
-                Text(session.activity!,
-                    style: GoogleFonts.nunito(
-                        fontSize: 13,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              Text(session.date,
-                  style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: color)),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
