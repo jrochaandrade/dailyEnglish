@@ -7,7 +7,10 @@ enum StudyType {
   String get label => name[0].toUpperCase() + name.substring(1);
 
   static StudyType fromString(String value) =>
-      StudyType.values.firstWhere((e) => e.name == value);
+      StudyType.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => throw ArgumentError('Unknown StudyType: "$value"'),
+      );
 }
 
 class StudySession {
@@ -18,7 +21,7 @@ class StudySession {
   final String? activity;
   final DateTime createdAt;
 
-  const StudySession({
+  StudySession({
     this.id,
     required this.type,
     required this.durationMinutes,
@@ -44,7 +47,7 @@ class StudySession {
       'type': type.name,
       'duration_minutes': durationMinutes,
       'date': date,
-      'activity': activity,
+      if (activity != null) 'activity': activity,
       'created_at': createdAt.toIso8601String(),
     };
   }
