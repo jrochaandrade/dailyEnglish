@@ -342,7 +342,7 @@ class _SessionTile extends ConsumerWidget {
                 ),
               );
               if (confirmed == true && context.mounted) {
-                ref
+                await ref
                     .read(studySessionListProvider.notifier)
                     .deleteSession(id);
               }

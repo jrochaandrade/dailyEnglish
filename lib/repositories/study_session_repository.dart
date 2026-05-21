@@ -23,12 +23,14 @@ class StudySessionRepository {
   }
 
   Future<void> update(StudySession session) async {
+    final id = session.id;
+    if (id == null) throw ArgumentError('Cannot update a session without an id');
     final db = await _futureDb;
     await db.update(
       'study_sessions',
       session.toMap(),
       where: 'id = ?',
-      whereArgs: [session.id],
+      whereArgs: [id],
     );
   }
 }
