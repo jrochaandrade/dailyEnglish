@@ -494,6 +494,8 @@ class _SkillGroup extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ExpansionTile(
         initiallyExpanded: false,
+        shape: const Border(),
+        collapsedShape: const Border(),
         leading: Icon(icon, color: color),
         title: Text(
           '${type.label}  ·  ${_fmt(totalMinutes)}',
