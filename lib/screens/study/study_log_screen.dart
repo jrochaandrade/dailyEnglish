@@ -112,10 +112,21 @@ class _StudyLogScreenState extends ConsumerState<StudyLogScreen>
                       for (final t in StudyType.values)
                         t: sessions.where((s) => s.type == t).toList(),
                     };
+                    DateTime? firstDate;
+                    if (sessions.isNotEmpty) {
+                      final dates = sessions
+                          .map((s) => DateTime.parse(s.date))
+                          .toList()
+                        ..sort();
+                      firstDate = dates.first;
+                    }
                     return ListView(
                       children: [
                         for (final type in StudyType.values)
-                          _SkillGroup(type: type, sessions: grouped[type]!),
+                          _SkillGroup(
+                              type: type,
+                              sessions: grouped[type]!,
+                              firstDate: firstDate),
                         const SizedBox(height: 80),
                       ],
                     );
@@ -407,6 +418,7 @@ class _MockTestTile extends ConsumerWidget {
 class _SkillGroup extends StatelessWidget {
   final StudyType type;
   final List<StudySession> sessions;
+  final DateTime? firstDate;
 
   static const _typeIcons = {
     StudyType.listening: Icons.headphones_rounded,
@@ -422,7 +434,8 @@ class _SkillGroup extends StatelessWidget {
     StudyType.speaking: Colors.orange,
   };
 
-  const _SkillGroup({required this.type, required this.sessions});
+  const _SkillGroup(
+      {required this.type, required this.sessions, this.firstDate});
 
   String _fmt(int minutes) {
     final h = minutes ~/ 60;
@@ -432,11 +445,50 @@ class _SkillGroup extends StatelessWidget {
     return '${h}h ${m}m';
   }
 
+  Map<int, List<StudySession>> _groupByWeek(DateTime first) {
+    final result = <int, List<StudySession>>{};
+    for (final s in sessions) {
+      final d = DateTime.parse(s.date);
+      final weekNum = (d.difference(first).inDays ~/ 7) + 1;
+      result.putIfAbsent(weekNum, () => []).add(s);
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _typeColors[type]!;
     final icon = _typeIcons[type]!;
     final totalMinutes = sessions.fold(0, (sum, s) => sum + s.durationMinutes);
+    final first = firstDate;
+
+    List<Widget> children;
+    if (sessions.isEmpty) {
+      children = [
+        ListTile(
+          title: Text('No sessions yet.',
+              style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ),
+      ];
+    } else if (first == null) {
+      children =
+          sessions.map((s) => _SessionTile(key: ValueKey(s.id), session: s)).toList();
+    } else {
+      final byWeek = _groupByWeek(first);
+      final weeks = byWeek.keys.toList()..sort((a, b) => b.compareTo(a));
+      children = [
+        for (final weekNum in weeks) ...[
+          _WeekDivider(
+              weekNum: weekNum,
+              minutes: byWeek[weekNum]!
+                  .fold(0, (sum, s) => sum + s.durationMinutes)),
+          ...byWeek[weekNum]!
+              .map((s) => _SessionTile(key: ValueKey(s.id), session: s)),
+        ],
+      ];
+    }
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -445,23 +497,50 @@ class _SkillGroup extends StatelessWidget {
         leading: Icon(icon, color: color),
         title: Text(
           '${type.label}  ·  ${_fmt(totalMinutes)}',
-          style:
-              GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800),
+          style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800),
         ),
-        children: sessions.isEmpty
-            ? [
-                ListTile(
-                  title: Text('No sessions yet.',
-                      style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant)),
-                ),
-              ]
-            : sessions
-                .map((s) => _SessionTile(key: ValueKey(s.id), session: s))
-                .toList(),
+        children: children,
+      ),
+    );
+  }
+}
+
+class _WeekDivider extends StatelessWidget {
+  final int weekNum;
+  final int minutes;
+  const _WeekDivider({required this.weekNum, required this.minutes});
+
+  String _fmt(int m) {
+    final h = m ~/ 60;
+    final min = m % 60;
+    if (h == 0) return '${min}m';
+    if (min == 0) return '${h}h';
+    return '${h}h ${min}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+      child: Row(
+        children: [
+          Text(
+            'WEEK $weekNum',
+            style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                letterSpacing: 1.0),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _fmt(minutes),
+            style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
