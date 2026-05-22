@@ -445,14 +445,30 @@ class _SkillGroup extends StatelessWidget {
     return '${h}h ${m}m';
   }
 
-  Map<int, List<StudySession>> _groupByWeek(DateTime first) {
-    final result = <int, List<StudySession>>{};
+  Map<int, Map<int, List<StudySession>>> _groupByWeekAndDay(DateTime first) {
+    final result = <int, Map<int, List<StudySession>>>{};
     for (final s in sessions) {
       final d = DateTime.parse(s.date);
-      final weekNum = (d.difference(first).inDays ~/ 7) + 1;
-      result.putIfAbsent(weekNum, () => []).add(s);
+      final dayNum = d.difference(first).inDays + 1;
+      final weekNum = (dayNum - 1) ~/ 7 + 1;
+      result.putIfAbsent(weekNum, () => {});
+      result[weekNum]!.putIfAbsent(dayNum, () => []).add(s);
     }
     return result;
+  }
+
+  List<Widget> _dayChildren(Map<int, List<StudySession>> byDay) {
+    final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a));
+    return [
+      for (final dayNum in days) ...[
+        _DayDivider(
+            dayNum: dayNum,
+            minutes: byDay[dayNum]!
+                .fold(0, (sum, s) => sum + s.durationMinutes)),
+        ...byDay[dayNum]!
+            .map((s) => _SessionTile(key: ValueKey(s.id), session: s)),
+      ],
+    ];
   }
 
   @override
@@ -476,16 +492,16 @@ class _SkillGroup extends StatelessWidget {
       children =
           sessions.map((s) => _SessionTile(key: ValueKey(s.id), session: s)).toList();
     } else {
-      final byWeek = _groupByWeek(first);
-      final weeks = byWeek.keys.toList()..sort((a, b) => b.compareTo(a));
+      final byWeekDay = _groupByWeekAndDay(first);
+      final weeks = byWeekDay.keys.toList()..sort((a, b) => b.compareTo(a));
       children = [
         for (final weekNum in weeks) ...[
           _WeekDivider(
               weekNum: weekNum,
-              minutes: byWeek[weekNum]!
+              minutes: byWeekDay[weekNum]!.values
+                  .expand((l) => l)
                   .fold(0, (sum, s) => sum + s.durationMinutes)),
-          ...byWeek[weekNum]!
-              .map((s) => _SessionTile(key: ValueKey(s.id), session: s)),
+          ..._dayChildren(byWeekDay[weekNum]!),
         ],
       ];
     }
@@ -540,6 +556,45 @@ class _WeekDivider extends StatelessWidget {
             style: GoogleFonts.nunito(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayDivider extends StatelessWidget {
+  final int dayNum;
+  final int minutes;
+  const _DayDivider({required this.dayNum, required this.minutes});
+
+  String _fmt(int m) {
+    final h = m ~/ 60;
+    final min = m % 60;
+    if (h == 0) return '${min}m';
+    if (min == 0) return '${h}h';
+    return '${h}h ${min}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 4, 16, 2),
+      child: Row(
+        children: [
+          Text(
+            'Day $dayNum',
+            style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _fmt(minutes),
+            style: GoogleFonts.nunito(
+                fontSize: 11,
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
