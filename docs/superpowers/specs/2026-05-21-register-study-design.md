@@ -32,7 +32,7 @@ CREATE TABLE study_sessions (
 | File | Responsibility |
 |------|----------------|
 | `lib/models/study_session.dart` | `StudyType` enum + `StudySession` model with `fromMap`/`toMap` |
-| `lib/repositories/study_session_repository.dart` | `getAll()`, `insert()`, `delete(int id)`, `getTotalMinutesByType()` |
+| `lib/repositories/study_session_repository.dart` | `getAll()`, `insert()`, `delete(int id)`, `getTotalMinutesByType()` → `Map<String, int>` |
 | `lib/providers/study_session_provider.dart` | `StudySessionListNotifier` + `studyStatsProvider` |
 | `lib/screens/study/study_log_screen.dart` | History list grouped by date + summary header |
 | `lib/screens/study/study_session_form.dart` | Bottom sheet form widget |
@@ -121,5 +121,5 @@ Save button: inserts session, closes sheet, invalidates provider.
 - Route: `/study-log`
 - Header: same `StudyStats` summary card as home
 - Body: sessions grouped by date (most recent first), each row shows type icon + duration + activity preview
-- Swipe-to-delete with confirmation snackbar (undo)
+- Swipe-to-delete with confirmation snackbar
 - Empty state: "No study sessions yet. Tap 'Register Study' on the home screen to start."

@@ -38,7 +38,11 @@
       "Bash(dart run *)",
       "Bash(grep -v \"^$\")",
       "Bash(mkdir -p \"c:/Programacao/05 - Projects/daily_english/docs/superpowers/specs\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "PowerShell($dir = \"C:\\\\Programacao\\\\05 - Projects\\\\daily_english\\\\lib\\\\screens\\\\study\"; if \\(-not \\(Test-Path $dir\\)\\) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Get-ChildItem $dir -ErrorAction SilentlyContinue)",
+      "WebFetch(domain:api.flutter.dev)"
     ],
     "additionalDirectories": [
       "c:\\Programacao\\05 - Projects\\daily_english\\docs\\superpowers\\specs"

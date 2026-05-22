@@ -12,6 +12,7 @@ import '../../core/services/google_drive_service.dart';
 import 'dart:async';
 import '../../providers/global_search_provider.dart';
 import '../../providers/study_session_provider.dart';
+import '../../providers/mock_test_provider.dart';
 import '../../screens/study/study_session_form.dart';
 
 enum _HomeMenuItem { categories, studyLog, exportBackup, importBackup, backupToDrive, restoreFromDrive }
@@ -703,6 +704,7 @@ class _StudySummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(studyStatsProvider);
+    final mockStats = ref.watch(mockTestStatsProvider);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -754,7 +756,7 @@ class _StudySummaryCard extends ConsumerWidget {
                   fontWeight: FontWeight.w700),
             ),
             Text(
-              'Mock tests: —',
+              'Mock tests: ${mockStats.done == 0 ? '—' : '${mockStats.positive}/${mockStats.done} (${mockStats.rate.toStringAsFixed(0)}%)'}',
               style: GoogleFonts.nunito(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,

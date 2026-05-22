@@ -46,9 +46,8 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
 
     setState(() => _saving = true);
     try {
-      final targetsAsync = ref.read(mockTestTargetsProvider);
-      final targets = targetsAsync.valueOrNull;
-      final reachedTarget = targets?.isReached(l, r, w, s) ?? false;
+      final targets = await ref.read(mockTestTargetsProvider.future);
+      final reachedTarget = targets.isReached(l, r, w, s);
 
       final test = MockTest(
         date:
@@ -64,6 +63,12 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
       );
       await ref.read(mockTestListProvider.notifier).addTest(test);
       if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

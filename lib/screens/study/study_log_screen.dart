@@ -3,19 +3,68 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/study_session.dart';
+import '../../models/mock_test.dart';
 import '../../providers/study_session_provider.dart';
+import '../../providers/mock_test_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'study_session_form.dart';
+import 'mock_test_form.dart';
+import 'mock_targets_sheet.dart';
 
 enum _SessionAction { edit, delete }
 
-class StudyLogScreen extends ConsumerWidget {
+class StudyLogScreen extends ConsumerStatefulWidget {
   const StudyLogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudyLogScreen> createState() => _StudyLogScreenState();
+}
+
+class _StudyLogScreenState extends ConsumerState<StudyLogScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _addSession() => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (_) => const StudySessionForm(),
+      );
+
+  void _addMockTest() => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (_) => const MockTestForm(),
+      );
+
+  void _openTargetsSheet() => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (_) => const MockTargetsSheet(),
+      );
+
+  @override
+  Widget build(BuildContext context) {
     final sessionsAsync = ref.watch(studySessionListProvider);
     final stats = ref.watch(studyStatsProvider);
+    final mockStats = ref.watch(mockTestStatsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -23,39 +72,61 @@ class StudyLogScreen extends ConsumerWidget {
         leading: BackButton(
             onPressed: () =>
                 context.canPop() ? context.pop() : context.go('/')),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-          builder: (_) => const StudySessionForm(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: _openTargetsSheet,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Sessions'),
+            Tab(text: 'Mock Tests'),
+          ],
         ),
-        backgroundColor: AppTheme.primary,
-        child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: sessionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('Error loading sessions.')),
-        data: (sessions) {
-          final grouped = <StudyType, List<StudySession>>{
-            for (final t in StudyType.values)
-              t: sessions.where((s) => s.type == t).toList(),
-          };
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _StatsHeader(stats: stats)),
-              SliverList(
-                delegate: SliverChildListDelegate([
-                  for (final type in StudyType.values)
-                    _SkillGroup(type: type, sessions: grouped[type]!),
-                  const SizedBox(height: 80),
-                ]),
-              ),
-            ],
-          );
-        },
+      floatingActionButton: AnimatedBuilder(
+        animation: _tabController,
+        builder: (_, __) => FloatingActionButton(
+          onPressed: _tabController.index == 0 ? _addSession : _addMockTest,
+          backgroundColor: AppTheme.primary,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
+      body: Column(
+        children: [
+          _StatsHeader(stats: stats, mockStats: mockStats),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Sessions tab
+                sessionsAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) =>
+                      const Center(child: Text('Error loading sessions.')),
+                  data: (sessions) {
+                    final grouped = <StudyType, List<StudySession>>{
+                      for (final t in StudyType.values)
+                        t: sessions.where((s) => s.type == t).toList(),
+                    };
+                    return ListView(
+                      children: [
+                        for (final type in StudyType.values)
+                          _SkillGroup(type: type, sessions: grouped[type]!),
+                        const SizedBox(height: 80),
+                      ],
+                    );
+                  },
+                ),
+                // Mock Tests tab
+                const _MockTestsTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -63,7 +134,8 @@ class StudyLogScreen extends ConsumerWidget {
 
 class _StatsHeader extends StatelessWidget {
   final StudyStats stats;
-  const _StatsHeader({required this.stats});
+  final MockTestStats mockStats;
+  const _StatsHeader({required this.stats, required this.mockStats});
 
   String _fmt(int minutes) {
     final h = minutes ~/ 60;
@@ -121,13 +193,25 @@ class _StatsHeader extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _SkillStat(label: 'Listening', minutes: stats.listeningMinutes, color: AppTheme.primary),
+                _SkillStat(
+                    label: 'Listening',
+                    minutes: stats.listeningMinutes,
+                    color: AppTheme.primary),
                 const SizedBox(width: 12),
-                _SkillStat(label: 'Reading', minutes: stats.readingMinutes, color: AppTheme.secondary),
+                _SkillStat(
+                    label: 'Reading',
+                    minutes: stats.readingMinutes,
+                    color: AppTheme.secondary),
                 const SizedBox(width: 12),
-                _SkillStat(label: 'Writing', minutes: stats.writingMinutes, color: AppTheme.tertiary),
+                _SkillStat(
+                    label: 'Writing',
+                    minutes: stats.writingMinutes,
+                    color: AppTheme.tertiary),
                 const SizedBox(width: 12),
-                _SkillStat(label: 'Speaking', minutes: stats.speakingMinutes, color: Colors.orange),
+                _SkillStat(
+                    label: 'Speaking',
+                    minutes: stats.speakingMinutes,
+                    color: Colors.orange),
               ],
             ),
             const Divider(height: 28),
@@ -138,12 +222,20 @@ class _StatsHeader extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     letterSpacing: 1.2)),
             const SizedBox(height: 8),
-            const Row(
+            Row(
               children: [
-                _MockStat(label: 'Done', value: '—'),
-                _MockStat(label: 'Positive', value: '—'),
-                _MockStat(label: 'Rate', value: '—'),
-                _MockStat(label: 'Book test?', value: '—'),
+                _MockStat(label: 'Done', value: '${mockStats.done}'),
+                _MockStat(label: 'Positive', value: '${mockStats.positive}'),
+                _MockStat(
+                    label: 'Rate',
+                    value: mockStats.done == 0
+                        ? '—'
+                        : '${mockStats.rate.toStringAsFixed(0)}%'),
+                _MockStat(
+                    label: 'Book test?',
+                    value: mockStats.done == 0
+                        ? '—'
+                        : (mockStats.bookTest ? 'Yes' : 'No')),
               ],
             ),
           ],
@@ -212,6 +304,106 @@ class _MockStat extends StatelessWidget {
   }
 }
 
+class _MockTestsTab extends ConsumerWidget {
+  const _MockTestsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mockTestsAsync = ref.watch(mockTestListProvider);
+    return mockTestsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const Center(child: Text('Error loading mock tests.')),
+      data: (tests) {
+        if (tests.isEmpty) {
+          return ListView(
+            children: const [
+              ListTile(title: Text('No mock tests yet.')),
+            ],
+          );
+        }
+        return ListView(
+          children: [
+            for (final test in tests)
+              _MockTestTile(key: ValueKey(test.id), test: test),
+            const SizedBox(height: 80),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MockTestTile extends ConsumerWidget {
+  final MockTest test;
+  const _MockTestTile({super.key, required this.test});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reached = test.reachedTarget;
+    return ListTile(
+      title: Text(test.date,
+          style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800)),
+      subtitle: Text(
+        'L ${test.listeningScore.toStringAsFixed(1)} · '
+        'R ${test.readingScore.toStringAsFixed(1)} · '
+        'W ${test.writingScore.toStringAsFixed(1)} · '
+        'S ${test.speakingScore.toStringAsFixed(1)}',
+        style: GoogleFonts.nunito(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            reached ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            color: reached ? Colors.green : Colors.red,
+          ),
+          PopupMenuButton<void>(
+            icon: const Icon(Icons.more_vert_rounded),
+            itemBuilder: (_) => [
+              const PopupMenuItem<void>(
+                value: null,
+                child: ListTile(
+                  leading: Icon(Icons.delete_rounded, color: Colors.red),
+                  title:
+                      Text('Delete', style: TextStyle(color: Colors.red)),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+            onSelected: (_) async {
+              final id = test.id;
+              if (id == null) return;
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete this test?'),
+                  content: const Text('This cannot be undone.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Delete',
+                            style: TextStyle(color: Colors.red))),
+                  ],
+                ),
+              );
+              if (confirmed == true && context.mounted) {
+                await ref
+                    .read(mockTestListProvider.notifier)
+                    .deleteTest(id);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SkillGroup extends StatelessWidget {
   final StudyType type;
   final List<StudySession> sessions;
@@ -267,7 +459,9 @@ class _SkillGroup extends StatelessWidget {
                               .onSurfaceVariant)),
                 ),
               ]
-            : sessions.map((s) => _SessionTile(key: ValueKey(s.id), session: s)).toList(),
+            : sessions
+                .map((s) => _SessionTile(key: ValueKey(s.id), session: s))
+                .toList(),
       ),
     );
   }
@@ -284,8 +478,7 @@ class _SessionTile extends ConsumerWidget {
     final durationStr = h > 0 ? '${h}h ${m}m' : '${m}m';
 
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         durationStr,
         style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w800),
@@ -297,8 +490,7 @@ class _SessionTile extends ConsumerWidget {
             Text(session.activity!,
                 style: GoogleFonts.nunito(
                     fontSize: 13,
-                    color:
-                        Theme.of(context).colorScheme.onSurfaceVariant),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           Text(session.date,
@@ -360,8 +552,8 @@ class _SessionTile extends ConsumerWidget {
             value: _SessionAction.delete,
             child: ListTile(
                 leading: Icon(Icons.delete_rounded, color: Colors.red),
-                title: Text('Delete',
-                    style: TextStyle(color: Colors.red)),
+                title:
+                    Text('Delete', style: TextStyle(color: Colors.red)),
                 contentPadding: EdgeInsets.zero),
           ),
         ],
