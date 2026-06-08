@@ -120,8 +120,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
               )).toList();
         case _DeckType.phrasesDue:
-          final phrases = await ref.read(phraseRepositoryProvider).getAll();
-          cards = (phrases..shuffle()).map((p) => _FlashCard(
+          final phrases = await ref.read(phraseRepositoryProvider).getDue();
+          cards = phrases.map((p) => _FlashCard(
                 id: p.id!, front: p.phrase, back: p.translation,
                 meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
                 difficulty: p.difficulty, deckType: _deckType,

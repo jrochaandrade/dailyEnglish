@@ -13,7 +13,7 @@ class SM2Result {
 }
 
 // SuperMemo SM-2 algorithm.
-// quality: 0 = Again, 3 = Good, 5 = Easy
+// quality: 0–2 = Incorrect, 3 = Hard, 4 = Good, 5 = Easy
 SM2Result computeSM2({
   required int currentInterval,
   required double easeFactor,
@@ -22,27 +22,24 @@ SM2Result computeSM2({
 }) {
   int newInterval;
   int newRepetitions;
-  double newEaseFactor;
 
   if (quality >= 3) {
     if (repetitions == 0) {
-      newInterval = quality >= 5 ? 4 : 2;
+      newInterval = 1;
     } else if (repetitions == 1) {
-      newInterval = quality >= 5 ? 10 : 6;
+      newInterval = 6;
     } else {
       newInterval = (currentInterval * easeFactor).round();
-      if (quality >= 5) newInterval = (newInterval * 1.3).round();
       if (newInterval < 1) newInterval = 1;
     }
-    newEaseFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-    if (newEaseFactor < 1.3) newEaseFactor = 1.3;
     newRepetitions = repetitions + 1;
   } else {
     newInterval = 1;
     newRepetitions = 0;
-    newEaseFactor = easeFactor - 0.2;
-    if (newEaseFactor < 1.3) newEaseFactor = 1.3;
   }
+
+  double newEaseFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  if (newEaseFactor < 1.3) newEaseFactor = 1.3;
 
   // Due at midnight of the target day so cards appear when the user opens the app that day.
   final now = DateTime.now();
