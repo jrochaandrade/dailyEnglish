@@ -179,102 +179,124 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                 )
               ] else ...[
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Original Text',
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    // Original column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Original',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.copy_rounded, size: 18),
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: entry.content));
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto original copiado!')));
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: _translatedContent != null
+                                  ? Text(
+                                      _translatedContent!,
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        height: 1.6,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                    )
+                                  : TappableText(
+                                      text: entry.content,
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        height: 1.6,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                      highlightColor: AppTheme.secondary,
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.copy_rounded, size: 20),
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: entry.content));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto original copiado!')));
-                      },
+                    const SizedBox(width: 8),
+                    // AI Corrected column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'AI Corrected',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.copy_rounded, size: 18),
+                                color: AppTheme.primary,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: entry.correctedContent!));
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto corrigido copiado!')));
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: const BorderSide(color: AppTheme.primary, width: 2),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: _translatedCorrected != null
+                                  ? Text(
+                                      _translatedCorrected!,
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        height: 1.6,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                    )
+                                  : TappableText(
+                                      text: entry.correctedContent!,
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        height: 1.6,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                      highlightColor: AppTheme.primary,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: _translatedContent != null
-                    ? Text(
-                        _translatedContent!,
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          decoration: TextDecoration.lineThrough,
-                          decorationColor: Colors.red.withValues(alpha: 0.5),
-                        ),
-                      )
-                    : TappableText(
-                        text: entry.content,
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          decoration: TextDecoration.lineThrough,
-                          decorationColor: Colors.red.withValues(alpha: 0.5),
-                        ),
-                        highlightColor: AppTheme.secondary,
-                      ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'AI Corrected Text',
-                      style: GoogleFonts.nunito(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy_rounded, size: 20),
-                      color: AppTheme.primary,
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: entry.correctedContent!));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto corrigido copiado!')));
-                      },
-                    ),
-                  ],
-                ),
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: AppTheme.primary, width: 2),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: _translatedCorrected != null
-                    ? Text(
-                        _translatedCorrected!,
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      )
-                    : TappableText(
-                        text: entry.correctedContent!,
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        highlightColor: AppTheme.primary,
-                      ),
-                  ),
                 ),
               ],
               if (entry.comments != null) ...[
