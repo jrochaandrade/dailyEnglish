@@ -12,7 +12,11 @@ class Word {
   final String? exampleTranslation2;
   final String? example3;
   final String? exampleTranslation3;
-  final String? synonyms;
+  final String? synonym1;
+  final String? synonym2;
+  final String? synonym3;
+  final String? synonym4;
+  final String? synonym5;
   final String? opposite;
   final String? category;
   final int difficulty;
@@ -39,7 +43,11 @@ class Word {
     this.exampleTranslation2,
     this.example3,
     this.exampleTranslation3,
-    this.synonyms,
+    this.synonym1,
+    this.synonym2,
+    this.synonym3,
+    this.synonym4,
+    this.synonym5,
     this.opposite,
     this.category,
     this.difficulty = 1,
@@ -51,6 +59,11 @@ class Word {
     this.srRepetitions = 0,
     this.srInterval = 0,
   });
+
+  List<String> get synonymsList => [synonym1, synonym2, synonym3, synonym4, synonym5]
+      .whereType<String>()
+      .where((s) => s.isNotEmpty)
+      .toList();
 
   factory Word.fromMap(Map<String, dynamic> map) {
     return Word(
@@ -67,7 +80,12 @@ class Word {
       exampleTranslation2: map['example_translation_2'] as String?,
       example3: map['example_3'] as String?,
       exampleTranslation3: map['example_translation_3'] as String?,
-      synonyms: map['synonyms'] as String?,
+      // Support legacy 'synonyms' column during migration
+      synonym1: (map['synonym_1'] as String?) ?? (map['synonyms'] as String?),
+      synonym2: map['synonym_2'] as String?,
+      synonym3: map['synonym_3'] as String?,
+      synonym4: map['synonym_4'] as String?,
+      synonym5: map['synonym_5'] as String?,
       opposite: map['opposite'] as String?,
       category: map['category'] as String?,
       difficulty: map['difficulty'] as int? ?? 1,
@@ -98,7 +116,11 @@ class Word {
       'example_translation_2': exampleTranslation2,
       'example_3': example3,
       'example_translation_3': exampleTranslation3,
-      'synonyms': synonyms,
+      'synonym_1': synonym1,
+      'synonym_2': synonym2,
+      'synonym_3': synonym3,
+      'synonym_4': synonym4,
+      'synonym_5': synonym5,
       'opposite': opposite,
       'category': category,
       'difficulty': difficulty,
@@ -130,7 +152,11 @@ class Word {
           exampleTranslation2 == other.exampleTranslation2 &&
           example3 == other.example3 &&
           exampleTranslation3 == other.exampleTranslation3 &&
-          synonyms == other.synonyms &&
+          synonym1 == other.synonym1 &&
+          synonym2 == other.synonym2 &&
+          synonym3 == other.synonym3 &&
+          synonym4 == other.synonym4 &&
+          synonym5 == other.synonym5 &&
           opposite == other.opposite &&
           category == other.category &&
           difficulty == other.difficulty &&
@@ -146,7 +172,9 @@ class Word {
   int get hashCode => Object.hashAll([
         id, word, translation, translation2, translation3, meaning, meaningPt,
         example1, exampleTranslation1, example2, exampleTranslation2,
-        example3, exampleTranslation3, synonyms, opposite, category,
+        example3, exampleTranslation3,
+        synonym1, synonym2, synonym3, synonym4, synonym5,
+        opposite, category,
         difficulty, status, createdAt, updatedAt,
         nextReviewAt, easeFactor, srRepetitions, srInterval,
       ]);
@@ -165,7 +193,11 @@ class Word {
     String? exampleTranslation2,
     String? example3,
     String? exampleTranslation3,
-    String? synonyms,
+    String? synonym1,
+    String? synonym2,
+    String? synonym3,
+    String? synonym4,
+    String? synonym5,
     String? opposite,
     String? category,
     int? difficulty,
@@ -191,7 +223,11 @@ class Word {
       exampleTranslation2: exampleTranslation2 ?? this.exampleTranslation2,
       example3: example3 ?? this.example3,
       exampleTranslation3: exampleTranslation3 ?? this.exampleTranslation3,
-      synonyms: synonyms ?? this.synonyms,
+      synonym1: synonym1 ?? this.synonym1,
+      synonym2: synonym2 ?? this.synonym2,
+      synonym3: synonym3 ?? this.synonym3,
+      synonym4: synonym4 ?? this.synonym4,
+      synonym5: synonym5 ?? this.synonym5,
       opposite: opposite ?? this.opposite,
       category: category ?? this.category,
       difficulty: difficulty ?? this.difficulty,

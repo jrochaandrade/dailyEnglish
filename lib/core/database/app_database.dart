@@ -19,7 +19,7 @@ class AppDatabase {
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
-    return openDatabase(path, version: 15, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path, version: 16, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -38,7 +38,11 @@ class AppDatabase {
         example_translation_2 TEXT,
         example_3 TEXT,
         example_translation_3 TEXT,
-        synonyms TEXT,
+        synonym_1 TEXT,
+        synonym_2 TEXT,
+        synonym_3 TEXT,
+        synonym_4 TEXT,
+        synonym_5 TEXT,
         opposite TEXT,
         category TEXT,
         difficulty INTEGER DEFAULT 1,
@@ -326,6 +330,19 @@ class AppDatabase {
           created_at TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 16) {
+      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_1 TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_2 TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_3 TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_4 TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_5 TEXT'); } catch (_) {}
+      // Migrate any existing single-string synonyms value into synonym_1
+      try {
+        await db.execute(
+          "UPDATE words SET synonym_1 = synonyms WHERE synonyms IS NOT NULL AND synonyms != ''",
+        );
+      } catch (_) {}
     }
   }
 }

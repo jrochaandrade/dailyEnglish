@@ -22,6 +22,27 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
   String? _translatedContent;
   String? _translatedCorrected;
 
+  void _showFullView(
+    BuildContext context, {
+    required String title,
+    required String text,
+    required Color accentColor,
+    bool isPrimary = false,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _FullTextView(
+          title: title,
+          text: text,
+          accentColor: accentColor,
+          isPrimary: isPrimary,
+        ),
+      ),
+    );
+  }
+
   Future<void> _translate(dynamic entry) async {
     if (_translatedContent != null) {
       setState(() {
@@ -197,15 +218,33 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.copy_rounded, size: 18),
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: entry.content));
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto original copiado!')));
-                                },
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.open_in_full_rounded, size: 16),
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    tooltip: 'Full view',
+                                    onPressed: () => _showFullView(
+                                      context,
+                                      title: 'Original',
+                                      text: _translatedContent ?? entry.content,
+                                      accentColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy_rounded, size: 18),
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(text: entry.content));
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto original copiado!')));
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -253,15 +292,34 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                   color: AppTheme.primary,
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.copy_rounded, size: 18),
-                                color: AppTheme.primary,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: entry.correctedContent!));
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto corrigido copiado!')));
-                                },
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.open_in_full_rounded, size: 16),
+                                    color: AppTheme.primary,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    tooltip: 'Full view',
+                                    onPressed: () => _showFullView(
+                                      context,
+                                      title: 'AI Corrected',
+                                      text: _translatedCorrected ?? entry.correctedContent!,
+                                      accentColor: AppTheme.primary,
+                                      isPrimary: true,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy_rounded, size: 18),
+                                    color: AppTheme.primary,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(text: entry.correctedContent!));
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto corrigido copiado!')));
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -386,6 +444,63 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
             child: const Text('Remover', style: TextStyle(color: AppTheme.error)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FullTextView extends StatelessWidget {
+  final String title;
+  final String text;
+  final Color accentColor;
+  final bool isPrimary;
+
+  const _FullTextView({
+    required this.title,
+    required this.text,
+    required this.accentColor,
+    this.isPrimary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          title,
+          style: GoogleFonts.nunito(
+            fontWeight: FontWeight.w800,
+            color: accentColor,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy_rounded),
+            tooltip: 'Copy',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Texto copiado!')),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: TappableText(
+          text: text,
+          style: GoogleFonts.nunito(
+            fontSize: 17,
+            height: 1.75,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+          highlightColor: accentColor,
+        ),
       ),
     );
   }

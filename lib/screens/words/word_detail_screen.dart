@@ -158,8 +158,24 @@ class WordDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              if (word.synonyms != null) ...[
-                _InfoCard(title: 'Synonyms', child: TappableText(text: word.synonyms!, style: _bodyStyle(context))),
+              if (word.synonymsList.isNotEmpty) ...[
+                _InfoCard(
+                  title: 'Synonyms',
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: word.synonymsList.map((s) => Chip(
+                      label: TappableText(
+                        text: s,
+                        style: GoogleFonts.nunito(fontSize: 14, color: AppTheme.primary),
+                        highlightColor: AppTheme.primary,
+                      ),
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.08),
+                      side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    )).toList(),
+                  ),
+                ),
                 const SizedBox(height: 12),
               ],
               if (word.opposite != null) ...[

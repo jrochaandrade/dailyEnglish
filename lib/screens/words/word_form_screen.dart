@@ -35,7 +35,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
   late final TextEditingController _exampleTranslation2Ctrl;
   late final TextEditingController _example3Ctrl;
   late final TextEditingController _exampleTranslation3Ctrl;
-  late final TextEditingController _synonymsCtrl;
+  late final TextEditingController _synonym1Ctrl;
+  late final TextEditingController _synonym2Ctrl;
+  late final TextEditingController _synonym3Ctrl;
+  late final TextEditingController _synonym4Ctrl;
+  late final TextEditingController _synonym5Ctrl;
   late final TextEditingController _oppositeCtrl;
 
   String? _selectedCategory;
@@ -61,7 +65,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
     _exampleTranslation2Ctrl = TextEditingController();
     _example3Ctrl = TextEditingController();
     _exampleTranslation3Ctrl = TextEditingController();
-    _synonymsCtrl = TextEditingController();
+    _synonym1Ctrl = TextEditingController();
+    _synonym2Ctrl = TextEditingController();
+    _synonym3Ctrl = TextEditingController();
+    _synonym4Ctrl = TextEditingController();
+    _synonym5Ctrl = TextEditingController();
     _oppositeCtrl = TextEditingController();
 
     if (_isEditing) {
@@ -116,7 +124,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
         _exampleTranslation2Ctrl.text = word.exampleTranslation2 ?? '';
         _example3Ctrl.text = word.example3 ?? '';
         _exampleTranslation3Ctrl.text = word.exampleTranslation3 ?? '';
-        _synonymsCtrl.text = word.synonyms ?? '';
+        _synonym1Ctrl.text = word.synonym1 ?? '';
+        _synonym2Ctrl.text = word.synonym2 ?? '';
+        _synonym3Ctrl.text = word.synonym3 ?? '';
+        _synonym4Ctrl.text = word.synonym4 ?? '';
+        _synonym5Ctrl.text = word.synonym5 ?? '';
         _oppositeCtrl.text = word.opposite ?? '';
         _selectedCategory = word.category;
         _difficulty = word.difficulty;
@@ -149,7 +161,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
     _exampleTranslation2Ctrl.dispose();
     _example3Ctrl.dispose();
     _exampleTranslation3Ctrl.dispose();
-    _synonymsCtrl.dispose();
+    _synonym1Ctrl.dispose();
+    _synonym2Ctrl.dispose();
+    _synonym3Ctrl.dispose();
+    _synonym4Ctrl.dispose();
+    _synonym5Ctrl.dispose();
     _oppositeCtrl.dispose();
     super.dispose();
   }
@@ -235,7 +251,13 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
       if (exTrans.length > 2) _exampleTranslation3Ctrl.text = exTrans[2];
 
       final synonymsMatch = extractValue(['Synonyms:']);
-      if (synonymsMatch != null) _synonymsCtrl.text = synonymsMatch;
+      if (synonymsMatch != null) {
+        final parts = synonymsMatch.split(RegExp(r'[,;/]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        final synCtrls = [_synonym1Ctrl, _synonym2Ctrl, _synonym3Ctrl, _synonym4Ctrl, _synonym5Ctrl];
+        for (int i = 0; i < parts.length && i < synCtrls.length; i++) {
+          synCtrls[i].text = parts[i];
+        }
+      }
 
       final oppositeMatch = extractValue(['Opposite:']);
       if (oppositeMatch != null) _oppositeCtrl.text = oppositeMatch;
@@ -299,7 +321,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
       exampleTranslation2: _nullable(_exampleTranslation2Ctrl.text),
       example3: _nullable(_example3Ctrl.text),
       exampleTranslation3: _nullable(_exampleTranslation3Ctrl.text),
-      synonyms: _nullable(_synonymsCtrl.text),
+      synonym1: _nullable(_synonym1Ctrl.text),
+      synonym2: _nullable(_synonym2Ctrl.text),
+      synonym3: _nullable(_synonym3Ctrl.text),
+      synonym4: _nullable(_synonym4Ctrl.text),
+      synonym5: _nullable(_synonym5Ctrl.text),
       opposite: _nullable(_oppositeCtrl.text),
       category: _selectedCategory,
       difficulty: _difficulty,
@@ -387,7 +413,17 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
             const SizedBox(height: 12),
             _Field(controller: _exampleTranslation3Ctrl, label: 'Example 3 Translation'),
             const SizedBox(height: 12),
-            _Field(controller: _synonymsCtrl, label: 'Synonyms'),
+            const SizedBox(height: 8),
+            const _SectionLabel('SYNONYMS'),
+            _Field(controller: _synonym1Ctrl, label: 'Synonym 1'),
+            const SizedBox(height: 12),
+            _Field(controller: _synonym2Ctrl, label: 'Synonym 2'),
+            const SizedBox(height: 12),
+            _Field(controller: _synonym3Ctrl, label: 'Synonym 3'),
+            const SizedBox(height: 12),
+            _Field(controller: _synonym4Ctrl, label: 'Synonym 4'),
+            const SizedBox(height: 12),
+            _Field(controller: _synonym5Ctrl, label: 'Synonym 5'),
             const SizedBox(height: 12),
             _Field(controller: _oppositeCtrl, label: 'Opposite'),
             const SizedBox(height: 20),

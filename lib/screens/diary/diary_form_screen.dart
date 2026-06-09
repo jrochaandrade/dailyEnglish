@@ -20,6 +20,7 @@ class _DiaryFormScreenState extends ConsumerState<DiaryFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isEditing = false;
+  bool _isDirty = false;
 
   late final TextEditingController _titleCtrl;
   late final TextEditingController _contentCtrl;
@@ -79,6 +80,33 @@ class _DiaryFormScreenState extends ConsumerState<DiaryFormScreen> {
     super.dispose();
   }
 
+  Future<void> _handleBack() async {
+    if (!_isDirty) {
+      context.go('/diary');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Discard changes?'),
+        content: const Text('You have unsaved changes. If you go back, all data will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep editing'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Discard', style: TextStyle(color: AppTheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      context.go('/diary');
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -120,13 +148,21 @@ class _DiaryFormScreenState extends ConsumerState<DiaryFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Entry' : 'New Entry'),
-        leading: BackButton(onPressed: () => context.go('/diary')),
+        leading: BackButton(onPressed: _handleBack),
       ),
       body: Form(
         key: _formKey,
+        onChanged: () {
+          if (!_isDirty) setState(() => _isDirty = true);
+        },
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -230,6 +266,7 @@ class _DiaryFormScreenState extends ConsumerState<DiaryFormScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

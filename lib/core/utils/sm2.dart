@@ -25,11 +25,12 @@ SM2Result computeSM2({
 
   if (quality >= 3) {
     if (repetitions == 0) {
-      newInterval = 1;
+      newInterval = quality == 5 ? 3 : 1;
     } else if (repetitions == 1) {
-      newInterval = 6;
+      newInterval = quality == 5 ? 8 : 6;
     } else {
-      newInterval = (currentInterval * easeFactor).round();
+      final base = (currentInterval * easeFactor).round();
+      newInterval = quality == 5 ? (base * 1.3).round() : base;
       if (newInterval < 1) newInterval = 1;
     }
     newRepetitions = repetitions + 1;
@@ -57,8 +58,10 @@ String formatInterval(int days) {
   if (days <= 0) return 'hoje';
   if (days == 1) return 'amanhã';
   if (days < 7) return 'em $days dias';
-  if (days == 7) return 'em 1 semana';
-  if (days < 30) return 'em ${(days / 7).round()} semanas';
-  if (days < 365) return 'em ${(days / 30).round()} meses';
-  return 'em ${(days / 365).round()} ano(s)';
+  final weeks = (days / 7).round();
+  if (weeks <= 4) return weeks == 1 ? 'em 1 semana' : 'em $weeks semanas';
+  final months = (days / 30).round();
+  if (months < 12) return months == 1 ? 'em 1 mês' : 'em $months meses';
+  final years = (days / 365).round();
+  return years == 1 ? 'em 1 ano' : 'em $years anos';
 }

@@ -6,12 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/word_provider.dart';
 import '../../providers/phrasal_verb_provider.dart';
 import '../../providers/phrase_provider.dart';
+import '../../providers/diary_provider.dart';
 import '../../providers/player_stats_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/sm2.dart';
 import '../../core/services/audio_service.dart';
 
-enum _DeckType { wordsDue, wordsDifficult, wordsAll, phrasalVerbsDue, phrasalVerbsDifficult, phrasalVerbsAll, phrasesDue, phrasesDifficult, phrasesAll }
+enum _DeckType { wordsDue, wordsDifficult, wordsAll, phrasalVerbsDue, phrasalVerbsDifficult, phrasalVerbsAll, phrasesDue, phrasesDifficult, phrasesAll, diaryWords }
 
 class _FlashCard {
   final int id;
@@ -26,6 +27,8 @@ class _FlashCard {
   final int srInterval;
   final double easeFactor;
   final int srRepetitions;
+  final List<String>? synonyms;
+  final String? opposite;
 
   const _FlashCard({
     required this.id,
@@ -40,6 +43,8 @@ class _FlashCard {
     this.srInterval = 0,
     this.easeFactor = 2.5,
     this.srRepetitions = 0,
+    this.synonyms,
+    this.opposite,
   });
 }
 
@@ -74,6 +79,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+                synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
+                opposite: w.opposite,
               )).toList();
         case _DeckType.wordsDifficult:
           final all = await ref.read(wordRepositoryProvider).getAll();
@@ -84,6 +91,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+                synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
+                opposite: w.opposite,
               )).toList();
         case _DeckType.wordsAll:
           final all = await ref.read(wordRepositoryProvider).getAll();
@@ -93,6 +102,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+                synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
+                opposite: w.opposite,
               )).toList();
         case _DeckType.phrasalVerbsDue:
           final pvs = await ref.read(phrasalVerbRepositoryProvider).getDue();
@@ -144,6 +155,34 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 difficulty: p.difficulty, deckType: _deckType,
                 srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
               )).toList();
+        case _DeckType.diaryWords:
+          final entries = await ref.read(diaryRepositoryProvider).getAll();
+          final allWordsList = await ref.read(wordRepositoryProvider).getAll();
+          final wordMap = <String, dynamic>{for (final w in allWordsList) w.word.toLowerCase(): w};
+          final bracketRegex = RegExp(r'\[([^\]]+)\]');
+          final seen = <String>{};
+          final matched = <dynamic>[];
+          for (final entry in entries) {
+            for (final text in [entry.content, entry.correctedContent ?? '', entry.comments ?? '']) {
+              for (final m in bracketRegex.allMatches(text)) {
+                final key = m.group(1)!.toLowerCase().trim();
+                if (!seen.contains(key) && wordMap.containsKey(key)) {
+                  seen.add(key);
+                  matched.add(wordMap[key]!);
+                }
+              }
+            }
+          }
+          matched.shuffle();
+          cards = matched.map((w) => _FlashCard(
+                id: w.id!, front: w.word,
+                back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
+                meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                difficulty: w.difficulty, deckType: _deckType,
+                srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
+                synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
+                opposite: w.opposite,
+              )).toList();
       }
 
       if (cards.isEmpty) return;
@@ -166,6 +205,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       case _DeckType.wordsDue:
       case _DeckType.wordsDifficult:
       case _DeckType.wordsAll:
+      case _DeckType.diaryWords:
         final repo = ref.read(wordRepositoryProvider);
         final word = await repo.getById(card.id);
         if (word != null) {
@@ -222,6 +262,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       case _DeckType.wordsDue:
       case _DeckType.wordsDifficult:
       case _DeckType.wordsAll:
+      case _DeckType.diaryWords:
         await ref.read(wordRepositoryProvider).updateSM2(
               card.id,
               nextReviewAt: result.nextReviewAt,
@@ -335,6 +376,20 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final allPVCount = allPV.length;
     final allPhrasesCount = allPhrases.length;
 
+    // Diary words: words tagged with [] in diary entries that exist in the dictionary
+    final diaryEntries = ref.watch(diaryListProvider).valueOrNull ?? [];
+    final wordMapLower = <String, bool>{for (final w in allWords) w.word.toLowerCase(): true};
+    final bracketRegex = RegExp(r'\[([^\]]+)\]');
+    final diaryTagged = <String>{};
+    for (final entry in diaryEntries) {
+      for (final text in [entry.content, entry.correctedContent ?? '', entry.comments ?? '']) {
+        for (final m in bracketRegex.allMatches(text)) {
+          diaryTagged.add(m.group(1)!.toLowerCase().trim());
+        }
+      }
+    }
+    final diaryWordsCount = diaryTagged.where((w) => wordMapLower.containsKey(w)).length;
+
     int selectedCount() {
       switch (_deckType) {
         case _DeckType.wordsDue: return wordsDueCount;
@@ -346,6 +401,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
         case _DeckType.phrasesDue: return phrasesDueCount;
         case _DeckType.phrasesDifficult: return phrasesDifficultCount;
         case _DeckType.phrasesAll: return allPhrasesCount;
+        case _DeckType.diaryWords: return diaryWordsCount;
       }
     }
 
@@ -471,6 +527,18 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 selected: _deckType == _DeckType.phrasesAll,
                 onTap: () => setState(() => _deckType = _DeckType.phrasesAll),
                 accentColor: AppTheme.secondary,
+              ),
+              const SizedBox(height: 20),
+              _sectionLabel(context, 'DIARY'),
+              const SizedBox(height: 8),
+              _DeckCard(
+                icon: '📓',
+                label: 'Words from Diary',
+                subtitle: 'Words tagged with [ ] that are in your dictionary',
+                count: diaryWordsCount,
+                selected: _deckType == _DeckType.diaryWords,
+                onTap: () => setState(() => _deckType = _DeckType.diaryWords),
+                accentColor: AppTheme.warning,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -813,6 +881,60 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
+              ),
+            ],
+            if (card.synonyms != null) ...[
+              const SizedBox(height: 10),
+              const Divider(),
+              const SizedBox(height: 4),
+              Text(
+                'SYNONYMS',
+                style: GoogleFonts.nunito(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: card.synonyms!.map((s) => Chip(
+                  label: Text(
+                    s,
+                    style: GoogleFonts.nunito(fontSize: 12, color: AppTheme.primary),
+                  ),
+                  backgroundColor: AppTheme.primary.withValues(alpha: 0.08),
+                  side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                )).toList(),
+              ),
+            ],
+            if (card.opposite != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'OPPOSITE  ',
+                    style: GoogleFonts.nunito(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.1,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    card.opposite!,
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.error,
+                    ),
+                  ),
+                ],
               ),
             ],
             if (examples.isNotEmpty) ...[
