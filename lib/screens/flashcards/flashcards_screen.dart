@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,6 +66,51 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   final Map<int, int> _answers = {};
   bool _isFlipped = false;
   bool _isLoading = false;
+  bool _hideTranslation = false;
+
+  static const _kHideTranslation = 'flashcard_hide_translation';
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (mounted) setState(() => _hideTranslation = prefs.getBool(_kHideTranslation) ?? false);
+    });
+  }
+
+  Future<void> _setHideTranslation(bool value) async {
+    setState(() => _hideTranslation = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kHideTranslation, value);
+  }
+
+  void _showSettings(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Flashcard Settings'),
+          content: SwitchListTile(
+            title: const Text('Hide translation'),
+            subtitle: const Text('Study without seeing the translated word'),
+            value: _hideTranslation,
+            onChanged: (v) {
+              _setHideTranslation(v);
+              setDialogState(() {});
+            },
+            activeThumbColor: AppTheme.primary,
+            contentPadding: EdgeInsets.zero,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _startSession() async {
     setState(() => _isLoading = true);
@@ -158,23 +204,44 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
         case _DeckType.diaryWords:
           final entries = await ref.read(diaryRepositoryProvider).getAll();
           final allWordsList = await ref.read(wordRepositoryProvider).getAll();
-          final wordMap = <String, dynamic>{for (final w in allWordsList) w.word.toLowerCase(): w};
-          final bracketRegex = RegExp(r'\[([^\]]+)\]');
-          final seen = <String>{};
-          final matched = <dynamic>[];
+          final bracketRegex2 = RegExp(r'\[([^\]]+)\]');
+          final taggedKeys = <String>{};
           for (final entry in entries) {
             for (final text in [entry.content, entry.correctedContent ?? '', entry.comments ?? '']) {
-              for (final m in bracketRegex.allMatches(text)) {
-                final key = m.group(1)!.toLowerCase().trim();
-                if (!seen.contains(key) && wordMap.containsKey(key)) {
-                  seen.add(key);
-                  matched.add(wordMap[key]!);
-                }
+              for (final m in bracketRegex2.allMatches(text)) {
+                taggedKeys.add(m.group(1)!.toLowerCase().trim());
               }
             }
           }
-          matched.shuffle();
-          cards = matched.map((w) => _FlashCard(
+          final nowMs = DateTime.now();
+          final seenIds = <int>{};
+          final diaryMatched = <dynamic>[];
+          for (final w in allWordsList) {
+            if (seenIds.contains(w.id!)) continue;
+            // Due filter — skip if next review is in the future
+            if (w.nextReviewAt != null && w.nextReviewAt!.isAfter(nowMs)) continue;
+            final wLower = w.word.toLowerCase();
+            bool isTagged = taggedKeys.contains(wLower);
+            // Also check translations — user may tag the Portuguese word while dictionary stores English
+            if (!isTagged) {
+              for (final t in [w.translation, w.translation2, w.translation3]) {
+                if (t != null && taggedKeys.contains(t.toLowerCase().trim())) {
+                  isTagged = true;
+                  break;
+                }
+              }
+            }
+            // Conjugation match: tagged word contains the dictionary word (min 4 chars)
+            if (!isTagged && wLower.length >= 4) {
+              isTagged = taggedKeys.any((tag) => tag.contains(wLower));
+            }
+            if (isTagged) {
+              seenIds.add(w.id!);
+              diaryMatched.add(w);
+            }
+          }
+          diaryMatched.shuffle();
+          cards = diaryMatched.map((w) => _FlashCard(
                 id: w.id!, front: w.word,
                 back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
@@ -376,9 +443,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final allPVCount = allPV.length;
     final allPhrasesCount = allPhrases.length;
 
-    // Diary words: words tagged with [] in diary entries that exist in the dictionary
+    // Diary words: dictionary words tagged with [] (any form) that are due for review
     final diaryEntries = ref.watch(diaryListProvider).valueOrNull ?? [];
-    final wordMapLower = <String, bool>{for (final w in allWords) w.word.toLowerCase(): true};
     final bracketRegex = RegExp(r'\[([^\]]+)\]');
     final diaryTagged = <String>{};
     for (final entry in diaryEntries) {
@@ -388,7 +454,17 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
         }
       }
     }
-    final diaryWordsCount = diaryTagged.where((w) => wordMapLower.containsKey(w)).length;
+    final now = DateTime.now();
+    final diaryWordsCount = allWords.where((w) {
+      if (w.nextReviewAt != null && w.nextReviewAt!.isAfter(now)) return false;
+      final wLower = w.word.toLowerCase();
+      if (diaryTagged.contains(wLower)) return true;
+      for (final t in [w.translation, w.translation2, w.translation3]) {
+        if (t != null && diaryTagged.contains(t.toLowerCase().trim())) return true;
+      }
+      if (wLower.length >= 4) return diaryTagged.any((tag) => tag.contains(wLower));
+      return false;
+    }).length;
 
     int selectedCount() {
       switch (_deckType) {
@@ -412,6 +488,17 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              if (value == 'settings') _showSettings(context);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
+            ],
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -847,30 +934,31 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Translation
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    card.back,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunito(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.secondary,
+            if (!_hideTranslation)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      card.back,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.secondary,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.volume_up_rounded, size: 20),
-                  color: AppTheme.primary,
-                  tooltip: 'Ouvir frase',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  onPressed: () => ref.read(audioServiceProvider).speak(card.front),
-                ),
-              ],
-            ),
+                  IconButton(
+                    icon: const Icon(Icons.volume_up_rounded, size: 20),
+                    color: AppTheme.primary,
+                    tooltip: 'Ouvir frase',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () => ref.read(audioServiceProvider).speak(card.front),
+                  ),
+                ],
+              ),
             if (card.meaningEn != null) ...[
               const SizedBox(height: 8),
               Text(
