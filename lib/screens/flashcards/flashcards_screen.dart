@@ -23,6 +23,9 @@ class _FlashCard {
   final String? example1;
   final String? example2;
   final String? example3;
+  final String? exampleTranslation1;
+  final String? exampleTranslation2;
+  final String? exampleTranslation3;
   final int difficulty;
   final _DeckType deckType;
   final int srInterval;
@@ -39,6 +42,9 @@ class _FlashCard {
     this.example1,
     this.example2,
     this.example3,
+    this.exampleTranslation1,
+    this.exampleTranslation2,
+    this.exampleTranslation3,
     required this.difficulty,
     required this.deckType,
     this.srInterval = 0,
@@ -67,14 +73,29 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   bool _isFlipped = false;
   bool _isLoading = false;
   bool _hideTranslation = false;
+  bool _phraseMode = false;
+  bool _translationRevealed = false;
+  int _phraseExampleIndex = 0;
 
   static const _kHideTranslation = 'flashcard_hide_translation';
+  static const _kPhraseMode = 'flashcard_phrase_mode';
+  static const _kPhraseExampleIndex = 'flashcard_phrase_example_index';
+  static const _kDailyLimit = 'flashcard_daily_limit';
+  
+  int _dailyLimit = 200;
 
   @override
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then((prefs) {
-      if (mounted) setState(() => _hideTranslation = prefs.getBool(_kHideTranslation) ?? false);
+      if (mounted) {
+        setState(() {
+          _hideTranslation = prefs.getBool(_kHideTranslation) ?? false;
+          _phraseMode = prefs.getBool(_kPhraseMode) ?? false;
+          _phraseExampleIndex = prefs.getInt(_kPhraseExampleIndex) ?? 0;
+          _dailyLimit = prefs.getInt(_kDailyLimit) ?? 200;
+        });
+      }
     });
   }
 
@@ -84,22 +105,131 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     await prefs.setBool(_kHideTranslation, value);
   }
 
+  Future<void> _setPhraseMode(bool value) async {
+    setState(() => _phraseMode = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kPhraseMode, value);
+  }
+
+  Future<void> _setPhraseExampleIndex(int value) async {
+    setState(() => _phraseExampleIndex = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kPhraseExampleIndex, value);
+  }
+
+  Future<void> _setDailyLimit(int value) async {
+    setState(() => _dailyLimit = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kDailyLimit, value);
+  }
+
+  // Picks the user's preferred example; falls back to whichever example is available.
+  String? _pickPhraseExample(_FlashCard card) {
+    final examples = [card.example1, card.example2, card.example3];
+    final preferred = examples[_phraseExampleIndex];
+    if (preferred != null && preferred.isNotEmpty) return preferred;
+    for (final e in examples) {
+      if (e != null && e.isNotEmpty) return e;
+    }
+    return null;
+  }
+
   void _showSettings(BuildContext context) {
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Flashcard Settings'),
-          content: SwitchListTile(
-            title: const Text('Hide translation'),
-            subtitle: const Text('Study without seeing the translated word'),
-            value: _hideTranslation,
-            onChanged: (v) {
-              _setHideTranslation(v);
-              setDialogState(() {});
-            },
-            activeThumbColor: AppTheme.primary,
-            contentPadding: EdgeInsets.zero,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                title: const Text('Hide translation'),
+                subtitle: const Text('Study without seeing the translated word'),
+                value: _hideTranslation,
+                onChanged: (v) {
+                  _setHideTranslation(v);
+                  setDialogState(() {});
+                },
+                activeThumbColor: AppTheme.primary,
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile(
+                title: const Text('Phrase mode'),
+                subtitle: const Text('Show example phrase on the front — guess the highlighted word from context'),
+                value: _phraseMode,
+                onChanged: (v) {
+                  _setPhraseMode(v);
+                  setDialogState(() {});
+                },
+                activeThumbColor: AppTheme.primary,
+                contentPadding: EdgeInsets.zero,
+              ),
+              if (_phraseMode) ...[
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Which phrase to show',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: List.generate(3, (i) {
+                    final selected = _phraseExampleIndex == i;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text('${i + 1}${i == 0 ? 'st' : i == 1 ? 'nd' : 'rd'}'),
+                        selected: selected,
+                        onSelected: (_) {
+                          _setPhraseExampleIndex(i);
+                          setDialogState(() {});
+                        },
+                        selectedColor: AppTheme.primary.withValues(alpha: 0.2),
+                        labelStyle: GoogleFonts.nunito(
+                          fontWeight: FontWeight.w700,
+                          color: selected ? AppTheme.primary : null,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Daily Limit'),
+                        Text('$_dailyLimit', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  Slider(
+                    value: _dailyLimit.toDouble(),
+                    min: 50,
+                    max: 500,
+                    divisions: 9,
+                    label: _dailyLimit.toString(),
+                    onChanged: (val) {
+                      _setDailyLimit(val.toInt());
+                      setDialogState(() {});
+                    },
+                    activeColor: AppTheme.primary,
+                  ),
+                ],
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -118,11 +248,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       final List<_FlashCard> cards;
       switch (_deckType) {
         case _DeckType.wordsDue:
-          final words = await ref.read(wordRepositoryProvider).getDueWords();
+          var words = await ref.read(wordRepositoryProvider).getDueWords();
+          if (words.length > _dailyLimit) words = words.take(_dailyLimit).toList();
           cards = words.map((w) => _FlashCard(
                 id: w.id!, front: w.word,
                 back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                exampleTranslation1: w.exampleTranslation1, exampleTranslation2: w.exampleTranslation2, exampleTranslation3: w.exampleTranslation3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
                 synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
@@ -135,6 +267,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 id: w.id!, front: w.word,
                 back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                exampleTranslation1: w.exampleTranslation1, exampleTranslation2: w.exampleTranslation2, exampleTranslation3: w.exampleTranslation3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
                 synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
@@ -146,16 +279,19 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 id: w.id!, front: w.word,
                 back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                exampleTranslation1: w.exampleTranslation1, exampleTranslation2: w.exampleTranslation2, exampleTranslation3: w.exampleTranslation3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
                 synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
                 opposite: w.opposite,
               )).toList();
         case _DeckType.phrasalVerbsDue:
-          final pvs = await ref.read(phrasalVerbRepositoryProvider).getDue();
+          var pvs = await ref.read(phrasalVerbRepositoryProvider).getDue();
+          if (pvs.length > _dailyLimit) pvs = pvs.take(_dailyLimit).toList();
           cards = pvs.map((pv) => _FlashCard(
-                id: pv.id!, front: pv.verb, back: pv.meaningPt ?? pv.meaning,
+                id: pv.id!, front: pv.verb, back: pv.meaning,
                 meaningEn: pv.meaningEn, example1: pv.example1, example2: pv.example2, example3: pv.example3,
+                exampleTranslation1: pv.exampleTranslation1, exampleTranslation2: pv.exampleTranslation2, exampleTranslation3: pv.exampleTranslation3,
                 difficulty: pv.difficulty, deckType: _deckType,
                 srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
               )).toList();
@@ -163,24 +299,28 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
           final all = await ref.read(phrasalVerbRepositoryProvider).getAll();
           cards = (all.where((pv) => pv.status == 'difficult').toList()..shuffle())
               .map((pv) => _FlashCard(
-                id: pv.id!, front: pv.verb, back: pv.meaningPt ?? pv.meaning,
+                id: pv.id!, front: pv.verb, back: pv.meaning,
                 meaningEn: pv.meaningEn, example1: pv.example1, example2: pv.example2, example3: pv.example3,
+                exampleTranslation1: pv.exampleTranslation1, exampleTranslation2: pv.exampleTranslation2, exampleTranslation3: pv.exampleTranslation3,
                 difficulty: pv.difficulty, deckType: _deckType,
                 srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
               )).toList();
         case _DeckType.phrasalVerbsAll:
           final all = await ref.read(phrasalVerbRepositoryProvider).getAll();
           cards = (all..shuffle()).map((pv) => _FlashCard(
-                id: pv.id!, front: pv.verb, back: pv.meaningPt ?? pv.meaning,
+                id: pv.id!, front: pv.verb, back: pv.meaning,
                 meaningEn: pv.meaningEn, example1: pv.example1, example2: pv.example2, example3: pv.example3,
+                exampleTranslation1: pv.exampleTranslation1, exampleTranslation2: pv.exampleTranslation2, exampleTranslation3: pv.exampleTranslation3,
                 difficulty: pv.difficulty, deckType: _deckType,
                 srInterval: pv.srInterval, easeFactor: pv.easeFactor, srRepetitions: pv.srRepetitions,
               )).toList();
         case _DeckType.phrasesDue:
-          final phrases = await ref.read(phraseRepositoryProvider).getDue();
+          var phrases = await ref.read(phraseRepositoryProvider).getDue();
+          if (phrases.length > _dailyLimit) phrases = phrases.take(_dailyLimit).toList();
           cards = phrases.map((p) => _FlashCard(
                 id: p.id!, front: p.phrase, back: p.translation,
                 meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
+                exampleTranslation1: p.exampleTranslation1, exampleTranslation2: p.exampleTranslation2, exampleTranslation3: p.exampleTranslation3,
                 difficulty: p.difficulty, deckType: _deckType,
                 srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
               )).toList();
@@ -190,6 +330,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
               .map((p) => _FlashCard(
                 id: p.id!, front: p.phrase, back: p.translation,
                 meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
+                exampleTranslation1: p.exampleTranslation1, exampleTranslation2: p.exampleTranslation2, exampleTranslation3: p.exampleTranslation3,
                 difficulty: p.difficulty, deckType: _deckType,
                 srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
               )).toList();
@@ -198,6 +339,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
           cards = (all..shuffle()).map((p) => _FlashCard(
                 id: p.id!, front: p.phrase, back: p.translation,
                 meaningEn: p.meaningEn, example1: p.example1, example2: p.example2, example3: p.example3,
+                exampleTranslation1: p.exampleTranslation1, exampleTranslation2: p.exampleTranslation2, exampleTranslation3: p.exampleTranslation3,
                 difficulty: p.difficulty, deckType: _deckType,
                 srInterval: p.srInterval, easeFactor: p.easeFactor, srRepetitions: p.srRepetitions,
               )).toList();
@@ -240,11 +382,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
               diaryMatched.add(w);
             }
           }
+          if (diaryMatched.length > _dailyLimit) diaryMatched.length = _dailyLimit;
           diaryMatched.shuffle();
           cards = diaryMatched.map((w) => _FlashCard(
                 id: w.id!, front: w.word,
                 back: [w.translation, w.translation2, w.translation3].whereType<String>().join(' / '),
                 meaningEn: w.meaning, example1: w.example1, example2: w.example2, example3: w.example3,
+                exampleTranslation1: w.exampleTranslation1, exampleTranslation2: w.exampleTranslation2, exampleTranslation3: w.exampleTranslation3,
                 difficulty: w.difficulty, deckType: _deckType,
                 srInterval: w.srInterval, easeFactor: w.easeFactor, srRepetitions: w.srRepetitions,
                 synonyms: w.synonymsList.isEmpty ? null : w.synonymsList,
@@ -302,6 +446,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     if (isLast) {
       setState(() {
         _isFlipped = false;
+        _translationRevealed = false;
         _phase = _Phase.results;
         ref.invalidate(dueWordsCountProvider);
         ref.invalidate(duePhrasalVerbsCountProvider);
@@ -310,6 +455,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     } else {
       setState(() {
         _isFlipped = false;
+        _translationRevealed = false;
         _currentIndex++;
       });
     }
@@ -368,6 +514,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       if (!mounted) return;
       setState(() {
         _isFlipped = false;
+        _translationRevealed = false;
         _phase = _Phase.results;
         ref.invalidate(dueWordsCountProvider);
         ref.invalidate(duePhrasalVerbsCountProvider);
@@ -376,6 +523,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     } else {
       setState(() {
         _isFlipped = false;
+        _translationRevealed = false;
         _currentIndex++;
       });
     }
@@ -670,12 +818,14 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       _answers.remove(_currentIndex - 1);
       _currentIndex--;
       _isFlipped = false;
+      _translationRevealed = false;
     });
   }
 
   Widget _buildStudying(BuildContext context) {
     final card = _session[_currentIndex];
     final progress = (_currentIndex + 1) / _session.length;
+    final phraseText = _phraseMode ? _pickPhraseExample(card) : null;
 
     return Scaffold(
       body: SafeArea(
@@ -738,8 +888,13 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
               const SizedBox(height: 20),
               _FlipCard(
                 isFlipped: _isFlipped,
-                onTap: () => setState(() => _isFlipped = !_isFlipped),
-                front: _buildCardFront(context, card),
+                onTap: () => setState(() {
+                  _isFlipped = !_isFlipped;
+                  if (!_isFlipped) _translationRevealed = false;
+                }),
+                front: phraseText != null
+                    ? _buildPhraseFront(context, card, phraseText)
+                    : _buildCardFront(context, card),
                 back: _buildCardBack(context, card),
               ),
               const SizedBox(height: 20),
@@ -907,11 +1062,160 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     );
   }
 
+  Widget _buildPhraseFront(BuildContext context, _FlashCard card, String phrase) {
+    final wordLower = card.front.toLowerCase();
+    final phraseLower = phrase.toLowerCase();
+
+    int start = -1;
+    int end = -1;
+
+    // Try word-boundary match first (exact form)
+    final boundary = RegExp(r'\b' + RegExp.escape(wordLower) + r'\b', caseSensitive: false);
+    final m = boundary.firstMatch(phrase);
+    if (m != null) {
+      start = m.start;
+      end = m.end;
+    } else {
+      // Fallback: substring (covers e.g. tagged word "force" found inside "forced")
+      final idx = phraseLower.indexOf(wordLower);
+      if (idx != -1) {
+        start = idx;
+        end = idx + wordLower.length;
+      } else if (!wordLower.contains(' ') && wordLower.length >= 4) {
+        // Fuzzy stem match — handles inflections in either direction
+        // (e.g. dictionary word "blind" but example uses "blinding")
+        final tokenRegex = RegExp(r"[A-Za-zÀ-ÖØ-öø-ÿ']+");
+        var bestOverlap = 0;
+        for (final tm in tokenRegex.allMatches(phrase)) {
+          final token = tm.group(0)!.toLowerCase();
+          final minLen = math.min(wordLower.length, token.length);
+          if (minLen < 4) continue;
+          var overlap = 0;
+          while (overlap < minLen && wordLower[overlap] == token[overlap]) {
+            overlap++;
+          }
+          if (overlap >= minLen - 2 && overlap >= 4 && overlap > bestOverlap) {
+            bestOverlap = overlap;
+            start = tm.start;
+            end = tm.end;
+          }
+        }
+      }
+    }
+
+    final baseStyle = GoogleFonts.nunito(
+      fontSize: 17,
+      height: 1.65,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+
+    final List<InlineSpan> spans;
+    if (start == -1) {
+      spans = [TextSpan(text: phrase, style: baseStyle)];
+    } else {
+      spans = [
+        if (start > 0) TextSpan(text: phrase.substring(0, start), style: baseStyle),
+        TextSpan(
+          text: phrase.substring(start, end),
+          style: baseStyle.copyWith(
+            color: AppTheme.primary,
+            fontWeight: FontWeight.w800,
+            decoration: TextDecoration.underline,
+            decorationColor: AppTheme.primary,
+          ),
+        ),
+        if (end < phrase.length) TextSpan(text: phrase.substring(end), style: baseStyle),
+      ];
+    }
+
+    final difficultyColor = _difficultyColor(card.difficulty);
+    final difficultyLabel = _difficultyLabel(card.difficulty);
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 200),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 48, 20, 52),
+            child: Center(
+              child: RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(children: spans),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: difficultyColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                difficultyLabel,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: difficultyColor,
+                ),
+              ),
+            ),
+          ),
+          if (card.srRepetitions > 0)
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '×${card.srRepetitions}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.secondary,
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: IconButton(
+              icon: const Icon(Icons.volume_up_rounded),
+              color: AppTheme.tertiary,
+              tooltip: 'Ouvir frase',
+              onPressed: () => ref.read(audioServiceProvider).speak(phrase),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCardBack(BuildContext context, _FlashCard card) {
-    final examples = [card.example1, card.example2, card.example3]
-        .whereType<String>()
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final examples = <List<String?>>[
+      [card.example1, card.exampleTranslation1],
+      [card.example2, card.exampleTranslation2],
+      [card.example3, card.exampleTranslation3],
+    ].where((p) => p[0] != null && p[0]!.isNotEmpty).toList();
+    final showTranslations = !_hideTranslation || _translationRevealed;
 
     return Container(
       constraints: const BoxConstraints(minHeight: 200),
@@ -933,8 +1237,23 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Translation
-            if (!_hideTranslation)
+            // In phrase mode show the word prominently so user knows what they were guessing
+            if (_phraseMode) ...[
+              Text(
+                card.front,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.nunito(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.primary,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppTheme.primary,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
+            // Translation — always show, or hide with reveal button
+            if (!_hideTranslation || _translationRevealed)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -958,6 +1277,21 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                     onPressed: () => ref.read(audioServiceProvider).speak(card.front),
                   ),
                 ],
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () => setState(() => _translationRevealed = true),
+                icon: const Icon(Icons.visibility_rounded, size: 18),
+                label: Text(
+                  'Show translation',
+                  style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.secondary,
+                  side: BorderSide(color: AppTheme.secondary.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
               ),
             if (card.meaningEn != null) ...[
               const SizedBox(height: 8),
@@ -1029,32 +1363,53 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
               const SizedBox(height: 12),
               const Divider(),
               const SizedBox(height: 4),
-              ...examples.map((ex) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        ex,
-                        style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+              ...examples.map((p) {
+                final ex = p[0]!;
+                final exTranslation = p[1];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              ex,
+                              style: GoogleFonts.nunito(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.volume_up_rounded, size: 18),
+                            color: AppTheme.tertiary,
+                            tooltip: 'Ouvir exemplo',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            onPressed: () => ref.read(audioServiceProvider).speak(ex),
+                          ),
+                        ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.volume_up_rounded, size: 18),
-                      color: AppTheme.tertiary,
-                      tooltip: 'Ouvir exemplo',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      onPressed: () => ref.read(audioServiceProvider).speak(ex),
-                    ),
-                  ],
-                ),
-              )),
+                      if (showTranslations && exTranslation != null && exTranslation.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            exTranslation,
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: AppTheme.secondary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ],
         ),

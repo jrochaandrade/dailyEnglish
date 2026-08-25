@@ -42,10 +42,12 @@
       "Bash(python3 -c ' *)",
       "Bash(python -c ' *)",
       "PowerShell($dir = \"C:\\\\Programacao\\\\05 - Projects\\\\daily_english\\\\lib\\\\screens\\\\study\"; if \\(-not \\(Test-Path $dir\\)\\) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Get-ChildItem $dir -ErrorAction SilentlyContinue)",
-      "WebFetch(domain:api.flutter.dev)"
+      "WebFetch(domain:api.flutter.dev)",
+      "Bash(cd \"c:\\\\Programacao\\\\05 - Projects\\\\daily_english\" && flutter analyze lib/screens/flashcards/flashcards_screen.dart 2>&1 | tail -5 && rm -f /tmp/test_regex.dart /tmp/test_fuzzy.dart)"
     ],
     "additionalDirectories": [
-      "c:\\Programacao\\05 - Projects\\daily_english\\docs\\superpowers\\specs"
+      "c:\\Programacao\\05 - Projects\\daily_english\\docs\\superpowers\\specs",
+      "\\tmp"
     ]
   }
 }
