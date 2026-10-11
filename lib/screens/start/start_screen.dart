@@ -68,6 +68,12 @@ class StartScreen extends StatelessWidget {
                   color: AppTheme.tertiary,
                   onTap: () => context.go('/materials'),
                 ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => context.go('/login'),
+                  icon: const Icon(Icons.login_rounded),
+                  label: const Text('Entrar ou criar conta'),
+                ),
               ],
             ),
           ),
