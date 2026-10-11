@@ -60,10 +60,17 @@ class Word {
     this.srInterval = 0,
   });
 
-  List<String> get synonymsList => [synonym1, synonym2, synonym3, synonym4, synonym5]
-      .whereType<String>()
-      .where((s) => s.isNotEmpty)
-      .toList();
+  List<String> get synonymsList => [
+        synonym1,
+        synonym2,
+        synonym3,
+        synonym4,
+        synonym5
+      ].whereType<String>().where((s) => s.isNotEmpty).toList();
+
+  /// Legacy compatibility accessor for callers that used the old single
+  /// `synonyms` field before synonyms were split into five columns.
+  String? get synonyms => synonymsList.isEmpty ? null : synonymsList.join(', ');
 
   factory Word.fromMap(Map<String, dynamic> map) {
     return Word(
@@ -170,13 +177,34 @@ class Word {
 
   @override
   int get hashCode => Object.hashAll([
-        id, word, translation, translation2, translation3, meaning, meaningPt,
-        example1, exampleTranslation1, example2, exampleTranslation2,
-        example3, exampleTranslation3,
-        synonym1, synonym2, synonym3, synonym4, synonym5,
-        opposite, category,
-        difficulty, status, createdAt, updatedAt,
-        nextReviewAt, easeFactor, srRepetitions, srInterval,
+        id,
+        word,
+        translation,
+        translation2,
+        translation3,
+        meaning,
+        meaningPt,
+        example1,
+        exampleTranslation1,
+        example2,
+        exampleTranslation2,
+        example3,
+        exampleTranslation3,
+        synonym1,
+        synonym2,
+        synonym3,
+        synonym4,
+        synonym5,
+        opposite,
+        category,
+        difficulty,
+        status,
+        createdAt,
+        updatedAt,
+        nextReviewAt,
+        easeFactor,
+        srRepetitions,
+        srInterval,
       ]);
 
   Word copyWith({

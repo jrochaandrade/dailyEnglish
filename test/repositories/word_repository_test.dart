@@ -24,17 +24,31 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               word TEXT NOT NULL,
               translation TEXT NOT NULL,
+              translation_2 TEXT,
+              translation_3 TEXT,
               meaning TEXT,
+              meaning_pt TEXT,
               example_1 TEXT,
+              example_translation_1 TEXT,
               example_2 TEXT,
+              example_translation_2 TEXT,
               example_3 TEXT,
-              synonyms TEXT,
+              example_translation_3 TEXT,
+              synonym_1 TEXT,
+              synonym_2 TEXT,
+              synonym_3 TEXT,
+              synonym_4 TEXT,
+              synonym_5 TEXT,
               opposite TEXT,
               category TEXT,
               difficulty INTEGER DEFAULT 1,
               status TEXT DEFAULT 'learning',
               created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
+              updated_at TEXT NOT NULL,
+              next_review_at INTEGER,
+              ease_factor REAL DEFAULT 2.5,
+              sr_repetitions INTEGER DEFAULT 0,
+              sr_interval INTEGER DEFAULT 0
             )
           ''');
         },
@@ -99,7 +113,8 @@ void main() {
   });
 
   test('filterByCategory returns only matching words', () async {
-    await repo.insert(makeWord(word: 'work', translation: 'trabalho', category: 'Work'));
+    await repo.insert(
+        makeWord(word: 'work', translation: 'trabalho', category: 'Work'));
     await repo.insert(makeWord(word: 'run', translation: 'correr'));
     final results = await repo.filterByCategory('Work');
     expect(results.length, 1);

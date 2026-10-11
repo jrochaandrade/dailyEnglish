@@ -39,6 +39,11 @@ class ContestCardsScreen extends ConsumerStatefulWidget {
 class _ContestCardsScreenState extends ConsumerState<ContestCardsScreen> {
   String? _subject;
 
+  String _reviewPath() => Uri(
+        path: '/concursos/review',
+        queryParameters: _subject == null ? null : {'subject': _subject},
+      ).toString();
+
   @override
   Widget build(BuildContext context) {
     final cards = ref.watch(contestCardListProvider);
@@ -52,7 +57,7 @@ class _ContestCardsScreenState extends ConsumerState<ContestCardsScreen> {
         actions: [
           IconButton(
             tooltip: 'Revisar cartões pendentes',
-            onPressed: () => context.push('/concursos/review'),
+            onPressed: () => context.push(_reviewPath()),
             icon: const Icon(Icons.play_circle_outline_rounded),
           ),
         ],
@@ -76,7 +81,7 @@ class _ContestCardsScreenState extends ConsumerState<ContestCardsScreen> {
                                 .colorScheme
                                 .onSurfaceVariant))),
                 TextButton(
-                    onPressed: () => context.push('/concursos/review'),
+                    onPressed: () => context.push(_reviewPath()),
                     child: const Text('Revisar')),
               ],
             ),
@@ -460,6 +465,7 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
   int _index = 0;
   bool _loading = true;
   bool _revealed = false;
+  bool _answering = false;
 
   @override
   void initState() {
@@ -480,25 +486,41 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
   }
 
   Future<void> _answer(int quality) async {
+    if (_answering || _index >= _cards.length) return;
+    setState(() => _answering = true);
     final card = _cards[_index];
-    final result = computeSM2(
-        currentInterval: card.interval,
-        easeFactor: card.easeFactor,
-        repetitions: card.repetitions,
-        quality: quality);
-    await ref.read(contestCardRepositoryProvider).updateReview(card.copyWith(
-        nextReviewAt: result.nextReviewAt,
-        easeFactor: result.easeFactor,
-        repetitions: result.repetitions,
-        interval: result.interval));
+    try {
+      final result = computeSM2(
+          currentInterval: card.interval,
+          easeFactor: card.easeFactor,
+          repetitions: card.repetitions,
+          quality: quality);
+      await ref.read(contestCardRepositoryProvider).updateReview(card.copyWith(
+          nextReviewAt: result.nextReviewAt,
+          easeFactor: result.easeFactor,
+          repetitions: result.repetitions,
+          interval: result.interval));
+    } catch (error) {
+      if (mounted) {
+        setState(() => _answering = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Não foi possível salvar a revisão: $error')),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     if (_index + 1 >= _cards.length) {
       ref.invalidate(contestCardListProvider);
-      setState(() => _index++);
+      setState(() {
+        _index++;
+        _answering = false;
+      });
     } else {
       setState(() {
         _index++;
         _revealed = false;
+        _answering = false;
       });
     }
   }
@@ -589,7 +611,8 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
                 (5, 'Fácil')
               ])
                 OutlinedButton(
-                    onPressed: () => _answer(item.$1), child: Text(item.$2)),
+                    onPressed: _answering ? null : () => _answer(item.$1),
+                    child: Text(item.$2)),
             ]),
         ]),
       ),
