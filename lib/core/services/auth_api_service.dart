@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_config.dart';
 
 class AuthApiService {
-  AuthApiService({String? baseUrl})
-      : baseUrl = baseUrl ?? 'http://10.0.2.2:8000/api';
+  AuthApiService({String? baseUrl}) : baseUrl = baseUrl ?? ApiConfig.baseUrl;
 
   final String baseUrl;
 
@@ -13,7 +13,7 @@ class AuthApiService {
     required String password,
   }) async {
     final response = await http.post(
-      Uri.parse('\$baseUrl/auth/login'),
+      Uri.parse('$baseUrl/auth/login'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -29,7 +29,7 @@ class AuthApiService {
     required String password,
   }) async {
     final response = await http.post(
-      Uri.parse('\$baseUrl/auth/register'),
+      Uri.parse('$baseUrl/auth/register'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'

@@ -25,6 +25,7 @@ import '../../screens/study/study_log_screen.dart';
 import '../../screens/concursos/contest_cards_screen.dart';
 import '../../screens/start/start_screen.dart';
 import '../../screens/materials/materials_screen.dart';
+import '../../screens/materials/study_content_screen.dart';
 import '../../screens/auth/login_screen.dart';
 
 final appRouter = GoRouter(
@@ -188,6 +189,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/materials',
       builder: (context, state) => const MaterialsScreen(),
+    ),
+    GoRoute(
+      path: '/study-content',
+      builder: (context, state) => const StudyContentScreen(),
     ),
     GoRoute(
       path: '/login',

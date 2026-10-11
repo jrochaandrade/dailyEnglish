@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/material.dart';
+import 'api_config.dart';
 
 class MaterialApiService {
   MaterialApiService({String? baseUrl})
-      : baseUrl = baseUrl ?? 'http://10.0.2.2:8000/api';
+      : baseUrl = baseUrl ?? ApiConfig.baseUrl;
 
   final String baseUrl;
 
@@ -19,11 +20,8 @@ class MaterialApiService {
     final token = await _token();
     if (token == null) throw const MaterialApiException('auth_required');
     final response = await http.get(
-      Uri.parse('\$baseUrl/materials'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer \$token'
-      },
+      Uri.parse('$baseUrl/materials'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 401) {
       throw const MaterialApiException('auth_required');
@@ -43,10 +41,10 @@ class MaterialApiService {
     if (token == null) throw const MaterialApiException('auth_required');
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('\$baseUrl/materials'),
+      Uri.parse('$baseUrl/materials'),
     )
       ..headers['Accept'] = 'application/json'
-      ..headers['Authorization'] = 'Bearer \$token'
+      ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath('file', file.path));
     if (title != null && title.trim().isNotEmpty) {
       request.fields['title'] = title.trim();

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/services/material_api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/material.dart';
@@ -101,7 +102,16 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Materiais')),
+      appBar: AppBar(
+        title: const Text('Materiais'),
+        actions: [
+          IconButton(
+            tooltip: 'Conteúdos gerados',
+            onPressed: () => context.push('/study-content'),
+            icon: const Icon(Icons.auto_awesome_rounded),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _loadMaterials,
         child: ListView(
