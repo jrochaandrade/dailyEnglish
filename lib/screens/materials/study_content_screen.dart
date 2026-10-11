@@ -94,29 +94,64 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
       BuildContext context, String topic, List<StudyContent> contents) {
     final flashcardCount =
         contents.fold<int>(0, (total, item) => total + item.flashcards.length);
+    final children = <Widget>[];
+    for (final content in contents) {
+      if (content.summary != null && content.summary!.trim().isNotEmpty) {
+        children.add(ExpansionTile(
+          title: const Text('Resumo'),
+          subtitle: Text(content.materialTitle ?? 'Material'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(content.summary!),
+              ),
+            ),
+          ],
+        ));
+      }
+      for (final flashcard in content.flashcards) {
+        children.add(ExpansionTile(
+          title: Text(flashcard['question'] as String? ?? 'Flashcard'),
+          subtitle: Text(content.materialTitle ?? 'Material'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(flashcard['answer'] as String? ?? ''),
+              ),
+            ),
+          ],
+        ));
+      }
+      for (final question in content.questions) {
+        children.add(ExpansionTile(
+          title: Text(question['question'] as String? ?? 'Questão'),
+          subtitle: Text(content.materialTitle ?? 'Material'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Gabarito: ${question['answer'] as String? ?? ''}\n\n${question['explanation'] as String? ?? ''}',
+                ),
+              ),
+            ),
+          ],
+        ));
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.only(top: 14),
       child: ExpansionTile(
         title:
             Text(topic, style: GoogleFonts.nunito(fontWeight: FontWeight.w900)),
         subtitle: Text('$flashcardCount flashcards'),
-        children: contents
-            .expand((content) =>
-                content.flashcards.map((flashcard) => ExpansionTile(
-                      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                      title:
-                          Text(flashcard['question'] as String? ?? 'Flashcard'),
-                      subtitle: Text(content.materialTitle ?? 'Material'),
-                      children: [
-                        Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Align(
-                                alignment: Alignment.centerLeft,
-                                child:
-                                    Text(flashcard['answer'] as String? ?? '')))
-                      ],
-                    )))
-            .toList(),
+        children: children,
       ),
     );
   }
