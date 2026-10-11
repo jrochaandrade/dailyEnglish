@@ -24,6 +24,7 @@ import '../../screens/games/game_content.dart';
 import '../../screens/study/study_log_screen.dart';
 import '../../screens/concursos/contest_cards_screen.dart';
 import '../../screens/start/start_screen.dart';
+import '../../screens/materials/materials_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -182,6 +183,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/concursos',
       builder: (context, state) => const ContestCardsScreen(),
+    ),
+    GoRoute(
+      path: '/materials',
+      builder: (context, state) => const MaterialsScreen(),
     ),
     GoRoute(
       path: '/concursos/new',
