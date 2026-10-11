@@ -283,6 +283,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 _StudyCard(
+                  label: 'Concursos',
+                  subtitle: 'Flashcards por matéria',
+                  icon: Icons.school_rounded,
+                  color: AppTheme.tertiary,
+                  onTap: () => context.push('/concursos'),
+                ),
+                const SizedBox(height: 12),
+                _StudyCard(
                   label: 'Mini-Games',
                   subtitle: 'Quick practice sessions',
                   icon: Icons.games_rounded,

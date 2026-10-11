@@ -22,6 +22,8 @@ import '../../screens/games/sentence_scramble_screen.dart';
 import '../../screens/games/english_quest_screen.dart';
 import '../../screens/games/game_content.dart';
 import '../../screens/study/study_log_screen.dart';
+import '../../screens/concursos/contest_cards_screen.dart';
+import '../../screens/start/start_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -29,6 +31,10 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
+      builder: (context, state) => const StartScreen(),
+    ),
+    GoRoute(
+      path: '/ingles',
       builder: (context, state) => const HomeScreen(),
     ),
     GoRoute(
@@ -37,7 +43,8 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/words/new',
-      builder: (context, state) => WordFormScreen(initialWord: state.uri.queryParameters['word']),
+      builder: (context, state) =>
+          WordFormScreen(initialWord: state.uri.queryParameters['word']),
     ),
     GoRoute(
       path: '/words/:id/edit',
@@ -171,6 +178,21 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/study-log',
       builder: (context, state) => const StudyLogScreen(),
+    ),
+    GoRoute(
+      path: '/concursos',
+      builder: (context, state) => const ContestCardsScreen(),
+    ),
+    GoRoute(
+      path: '/concursos/new',
+      builder: (context, state) => const ContestCardFormScreen(),
+    ),
+    GoRoute(
+      path: '/concursos/review',
+      builder: (context, state) => ContestReviewScreen(
+        subject: state.uri.queryParameters['subject'],
+        deck: state.uri.queryParameters['deck'],
+      ),
     ),
   ],
 );

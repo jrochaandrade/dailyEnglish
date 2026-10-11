@@ -19,7 +19,7 @@ class AppDatabase {
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
-    return openDatabase(path, version: 16, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path, version: 17, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -173,6 +173,24 @@ class AppDatabase {
         speaking_score REAL NOT NULL,
         reached_target INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE contest_cards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
+        deck TEXT NOT NULL,
+        front TEXT NOT NULL,
+        back TEXT NOT NULL,
+        note TEXT,
+        source TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        next_review_at INTEGER,
+        ease_factor REAL DEFAULT 2.5,
+        repetitions INTEGER DEFAULT 0,
+        review_interval INTEGER DEFAULT 0
       )
     ''');
   }
@@ -343,6 +361,25 @@ class AppDatabase {
           "UPDATE words SET synonym_1 = synonyms WHERE synonyms IS NOT NULL AND synonyms != ''",
         );
       } catch (_) {}
+    }
+    if (oldVersion < 17) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS contest_cards (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          subject TEXT NOT NULL,
+          deck TEXT NOT NULL,
+          front TEXT NOT NULL,
+          back TEXT NOT NULL,
+          note TEXT,
+          source TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          next_review_at INTEGER,
+          ease_factor REAL DEFAULT 2.5,
+          repetitions INTEGER DEFAULT 0,
+          review_interval INTEGER DEFAULT 0
+        )
+      ''');
     }
   }
 }
