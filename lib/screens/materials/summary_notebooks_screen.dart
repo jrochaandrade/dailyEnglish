@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/study_content_api_service.dart';
 import '../../core/services/summary_notebook_api_service.dart';
-import '../../core/utils/markdown_text.dart';
 import '../../models/summary_notebook.dart';
+import '../../widgets/notebook_content_view.dart';
 
 class SummaryNotebooksScreen extends StatefulWidget {
   const SummaryNotebooksScreen({super.key});
@@ -209,7 +209,7 @@ class _NotebookDetailScreenState extends State<_NotebookDetailScreen> {
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(18),
-                      child: Text(MarkdownText.plain(_notebook.content!)),
+                      child: NotebookContentView(markdown: _notebook.content!),
                     ),
                   ),
                 if ((_notebook.visual ?? '').isNotEmpty) ...[
