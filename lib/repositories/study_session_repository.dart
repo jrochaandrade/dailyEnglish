@@ -8,7 +8,8 @@ class StudySessionRepository {
 
   Future<List<StudySession>> getAll() async {
     final db = await _futureDb;
-    final maps = await db.query('study_sessions', orderBy: 'date DESC, created_at DESC');
+    final maps =
+        await db.query('study_sessions', orderBy: 'date DESC, created_at DESC');
     return maps.map(StudySession.fromMap).toList();
   }
 
@@ -24,7 +25,8 @@ class StudySessionRepository {
 
   Future<void> update(StudySession session) async {
     final id = session.id;
-    if (id == null) throw ArgumentError('Cannot update a session without an id');
+    if (id == null)
+      throw ArgumentError('Cannot update a session without an id');
     final db = await _futureDb;
     await db.update(
       'study_sessions',

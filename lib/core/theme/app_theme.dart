@@ -55,8 +55,10 @@ class AppTheme {
           foregroundColor: onPrimary,
           minimumSize: const Size(88, 56),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          textStyle: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          textStyle:
+              GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800),
         ),
       ),
       cardTheme: CardThemeData(
@@ -64,12 +66,14 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28),
-          side: BorderSide(color: Colors.grey.withValues(alpha: 0.08), width: 1.5),
+          side: BorderSide(
+              color: Colors.grey.withValues(alpha: 0.08), width: 1.5),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       ),
       listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -87,12 +91,14 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
         selectedColor: primary,
-        labelStyle: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700),
+        labelStyle:
+            GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700),
         secondaryLabelStyle: const TextStyle(color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
@@ -138,8 +144,10 @@ class AppTheme {
           foregroundColor: onPrimary,
           minimumSize: const Size(88, 56),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          textStyle: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          textStyle:
+              GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800),
         ),
       ),
       cardTheme: CardThemeData(
@@ -147,12 +155,14 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+          side: BorderSide(
+              color: Colors.white.withValues(alpha: 0.05), width: 1.5),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       ),
       listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -170,12 +180,14 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: _darkSurface,
         selectedColor: primary,
-        labelStyle: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700, color: _darkOnSurface),
+        labelStyle: GoogleFonts.nunito(
+            fontSize: 14, fontWeight: FontWeight.w700, color: _darkOnSurface),
         secondaryLabelStyle: const TextStyle(color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),

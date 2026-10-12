@@ -39,12 +39,14 @@ SM2Result computeSM2({
     newRepetitions = 0;
   }
 
-  double newEaseFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  double newEaseFactor =
+      easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
   if (newEaseFactor < 1.3) newEaseFactor = 1.3;
 
   // Due at midnight of the target day so cards appear when the user opens the app that day.
   final now = DateTime.now();
-  final nextReviewAt = DateTime(now.year, now.month, now.day).add(Duration(days: newInterval));
+  final nextReviewAt =
+      DateTime(now.year, now.month, now.day).add(Duration(days: newInterval));
 
   return SM2Result(
     interval: newInterval,

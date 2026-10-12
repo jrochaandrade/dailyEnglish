@@ -23,7 +23,8 @@ class CategoryRepository {
 
   Future<void> update(int id, String name) async {
     final db = await _futureDb;
-    await db.update('categories', {'name': name.trim()}, where: 'id = ?', whereArgs: [id]);
+    await db.update('categories', {'name': name.trim()},
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> delete(int id) async {

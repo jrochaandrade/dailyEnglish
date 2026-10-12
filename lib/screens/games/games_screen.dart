@@ -18,7 +18,8 @@ class _GamesScreenState extends State<GamesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mini-Games', style: GoogleFonts.nunito(fontWeight: FontWeight.w800)),
+        title: Text('Mini-Games',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w800)),
         leading: BackButton(
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
@@ -96,23 +97,28 @@ class _GamesScreenState extends State<GamesScreen> {
                 title: 'Multiple Choice',
                 description: 'See a term — pick the correct translation.',
                 accentColor: AppTheme.primary,
-                onPlay: () => context.push('/games/multiple-choice?source=${_source.name}'),
+                onPlay: () => context
+                    .push('/games/multiple-choice?source=${_source.name}'),
               ),
               const SizedBox(height: 12),
               _GameCard(
                 icon: '✏️',
                 title: 'Fill in the Blank',
-                description: 'Complete a sentence with the missing word or verb.',
+                description:
+                    'Complete a sentence with the missing word or verb.',
                 accentColor: AppTheme.tertiary,
-                onPlay: () => context.push('/games/fill-blank?source=${_source.name}'),
+                onPlay: () =>
+                    context.push('/games/fill-blank?source=${_source.name}'),
               ),
               const SizedBox(height: 12),
               _GameCard(
                 icon: '🔀',
                 title: 'Sentence Scramble',
-                description: 'Arrange shuffled words into the correct sentence.',
+                description:
+                    'Arrange shuffled words into the correct sentence.',
                 accentColor: AppTheme.secondary,
-                onPlay: () => context.push('/games/scramble?source=${_source.name}'),
+                onPlay: () =>
+                    context.push('/games/scramble?source=${_source.name}'),
               ),
             ],
           ),
@@ -165,10 +171,12 @@ class _GameCard extends StatelessWidget {
             backgroundColor: accentColor,
             foregroundColor: Colors.white,
             minimumSize: const Size(0, 40),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           ),
-          child: Text('Play', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+          child: Text('Play',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
         ),
       ),
     );

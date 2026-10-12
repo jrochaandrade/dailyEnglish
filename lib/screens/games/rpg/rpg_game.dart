@@ -52,9 +52,10 @@ class EnglishQuestGame extends FlameGame with HasCollisionDetection {
     if (!hasPlayerSpawn) {
       _player = Player(position: mapComponent.size / 2);
     }
-    
+
     // Add collisions from map (ObjectGroup)
-    final collisionsGroup = mapComponent.tileMap.getLayer<ObjectGroup>('Collisions');
+    final collisionsGroup =
+        mapComponent.tileMap.getLayer<ObjectGroup>('Collisions');
     if (collisionsGroup != null) {
       for (final obj in collisionsGroup.objects) {
         add(MapBoundary(Vector2(obj.x, obj.y), Vector2(obj.width, obj.height)));
@@ -89,7 +90,7 @@ class EnglishQuestGame extends FlameGame with HasCollisionDetection {
     add(_player);
     _player.joystick = joystick;
     add(joystick);
-    
+
     // Camera follow player
     camera.follow(_player);
   }
@@ -100,7 +101,8 @@ class EnglishQuestGame extends FlameGame with HasCollisionDetection {
 }
 
 class MapBoundary extends PositionComponent with CollisionCallbacks {
-  MapBoundary(Vector2 position, Vector2 size) : super(position: position, size: size) {
+  MapBoundary(Vector2 position, Vector2 size)
+      : super(position: position, size: size) {
     add(RectangleHitbox());
   }
 }
@@ -110,7 +112,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
   final double speed = 150.0;
   Vector2 _lastPosition = Vector2.zero();
 
-  Player({required Vector2 position}) : super(position: position, size: Vector2(32, 32), anchor: Anchor.center);
+  Player({required Vector2 position})
+      : super(position: position, size: Vector2(32, 32), anchor: Anchor.center);
 
   @override
   Future<void> onLoad() async {
@@ -129,7 +132,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
   }
 
   @override
-  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
+  void onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
     if (other is Enemy) {
       if (!other.isDefeated) {
@@ -146,7 +150,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
 class Enemy extends SpriteComponent with CollisionCallbacks {
   bool isDefeated = false;
 
-  Enemy({required Vector2 position}) : super(position: position, size: Vector2(32, 32), anchor: Anchor.center);
+  Enemy({required Vector2 position})
+      : super(position: position, size: Vector2(32, 32), anchor: Anchor.center);
 
   @override
   Future<void> onLoad() async {
@@ -161,4 +166,3 @@ class Enemy extends SpriteComponent with CollisionCallbacks {
     setOpacity(0.3);
   }
 }
-

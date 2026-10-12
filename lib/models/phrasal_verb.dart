@@ -125,10 +125,26 @@ class PhrasalVerb {
 
   @override
   int get hashCode => Object.hashAll([
-        id, baseVerb, particle, meaning, meaningPt, meaningEn,
-        example1, exampleTranslation1, example2, exampleTranslation2,
-        example3, exampleTranslation3, difficulty, status, createdAt, updatedAt,
-        nextReviewAt, easeFactor, srRepetitions, srInterval,
+        id,
+        baseVerb,
+        particle,
+        meaning,
+        meaningPt,
+        meaningEn,
+        example1,
+        exampleTranslation1,
+        example2,
+        exampleTranslation2,
+        example3,
+        exampleTranslation3,
+        difficulty,
+        status,
+        createdAt,
+        updatedAt,
+        nextReviewAt,
+        easeFactor,
+        srRepetitions,
+        srInterval,
       ]);
 
   PhrasalVerb copyWith({

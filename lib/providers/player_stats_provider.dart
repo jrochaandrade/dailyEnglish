@@ -20,7 +20,8 @@ class PlayerStatsNotifier extends AsyncNotifier<PlayerStats> {
     final last = stats.lastActivityDate;
     if (last == null || last == today) return stats;
 
-    final daysDiff = DateTime.parse(today).difference(DateTime.parse(last)).inDays;
+    final daysDiff =
+        DateTime.parse(today).difference(DateTime.parse(last)).inDays;
     if (daysDiff == 1) return stats;
 
     final PlayerStats updated;
@@ -28,14 +29,22 @@ class PlayerStatsNotifier extends AsyncNotifier<PlayerStats> {
       // Missed exactly 1 day
       if (stats.shields > 0) {
         // Advance lastActivityDate to yesterday so subsequent opens see daysDiff==1
-        final yesterday = DateTime.parse(last).add(const Duration(days: 1)).toIso8601String().substring(0, 10);
-        updated = stats.copyWith(shields: stats.shields - 1, streakAtRisk: false, gamesPlayedToday: '', lastActivityDate: yesterday);
+        final yesterday = DateTime.parse(last)
+            .add(const Duration(days: 1))
+            .toIso8601String()
+            .substring(0, 10);
+        updated = stats.copyWith(
+            shields: stats.shields - 1,
+            streakAtRisk: false,
+            gamesPlayedToday: '',
+            lastActivityDate: yesterday);
       } else {
         updated = stats.copyWith(streakAtRisk: true, gamesPlayedToday: '');
       }
     } else {
       // 3+ days since last play — streak broken
-      updated = stats.copyWith(streak: 0, streakAtRisk: false, gamesPlayedToday: '');
+      updated =
+          stats.copyWith(streak: 0, streakAtRisk: false, gamesPlayedToday: '');
     }
     await ref.read(playerStatsRepositoryProvider).save(updated);
     return updated;
@@ -92,4 +101,5 @@ class PlayerStatsNotifier extends AsyncNotifier<PlayerStats> {
 }
 
 final playerStatsProvider =
-    AsyncNotifierProvider<PlayerStatsNotifier, PlayerStats>(PlayerStatsNotifier.new);
+    AsyncNotifierProvider<PlayerStatsNotifier, PlayerStats>(
+        PlayerStatsNotifier.new);

@@ -51,9 +51,11 @@ class PhrasalVerbListNotifier extends AsyncNotifier<List<PhrasalVerb>> {
 }
 
 final phrasalVerbListProvider =
-    AsyncNotifierProvider<PhrasalVerbListNotifier, List<PhrasalVerb>>(PhrasalVerbListNotifier.new);
+    AsyncNotifierProvider<PhrasalVerbListNotifier, List<PhrasalVerb>>(
+        PhrasalVerbListNotifier.new);
 
-final phrasalVerbDetailProvider = FutureProvider.family<PhrasalVerb?, int>((ref, id) {
+final phrasalVerbDetailProvider =
+    FutureProvider.family<PhrasalVerb?, int>((ref, id) {
   return ref.watch(phrasalVerbRepositoryProvider).getById(id);
 });
 

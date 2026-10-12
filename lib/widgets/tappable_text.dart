@@ -29,7 +29,8 @@ class _TappableTextState extends State<TappableText> {
   List<TextSpan> _spans = [];
   final List<TapGestureRecognizer> _recognizers = [];
 
-  static final _tokenRegex = RegExp(r"\[[^\]]+\]|[a-zA-Z]+(?:'[a-zA-Z]+)*|[^a-zA-Z\[\]]+");
+  static final _tokenRegex =
+      RegExp(r"\[[^\]]+\]|[a-zA-Z]+(?:'[a-zA-Z]+)*|[^a-zA-Z\[\]]+");
   static final _startsWithLetter = RegExp(r'^[a-zA-Z]');
 
   @override
@@ -162,7 +163,8 @@ class _WordLookupSheetState extends ConsumerState<WordLookupSheet> {
                   icon: const Icon(Icons.volume_up_rounded, size: 20),
                   color: AppTheme.secondary,
                   tooltip: 'Ouvir pronúncia',
-                  onPressed: () => ref.read(audioServiceProvider).speak(widget.word),
+                  onPressed: () =>
+                      ref.read(audioServiceProvider).speak(widget.word),
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy_rounded, size: 20),
@@ -201,7 +203,8 @@ class _WordLookupSheetState extends ConsumerState<WordLookupSheet> {
                         onPressed: () {
                           final router = GoRouter.of(context);
                           Navigator.pop(context);
-                          router.push('/words/new?word=${Uri.encodeComponent(widget.word)}');
+                          router.push(
+                              '/words/new?word=${Uri.encodeComponent(widget.word)}');
                         },
                         label: const Text('Add to Dictionary'),
                         style: ElevatedButton.styleFrom(
@@ -215,7 +218,8 @@ class _WordLookupSheetState extends ConsumerState<WordLookupSheet> {
                 final w = words.first;
                 // If the user searched the English word, show the Portuguese translation.
                 // If they searched the Portuguese translation, show the English word.
-                final searchedEnglish = w.word.toLowerCase() == widget.word.toLowerCase();
+                final searchedEnglish =
+                    w.word.toLowerCase() == widget.word.toLowerCase();
                 final blueText = searchedEnglish ? w.translation : w.word;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

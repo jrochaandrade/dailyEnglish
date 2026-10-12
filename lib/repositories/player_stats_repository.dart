@@ -7,7 +7,8 @@ class PlayerStatsRepository {
 
   Future<PlayerStats> load() async {
     final db = await _futureDb;
-    final maps = await db.query('player_stats', where: 'id = ?', whereArgs: [1]);
+    final maps =
+        await db.query('player_stats', where: 'id = ?', whereArgs: [1]);
     if (maps.isEmpty) {
       const stats = PlayerStats();
       await db.insert('player_stats', stats.toMap());

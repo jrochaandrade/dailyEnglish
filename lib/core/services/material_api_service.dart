@@ -27,7 +27,7 @@ class MaterialApiService {
       throw const MaterialApiException('auth_required');
     }
     if (response.statusCode != 200) {
-      throw MaterialApiException('request_failed_\${response.statusCode}');
+      throw MaterialApiException('request_failed_${response.statusCode}');
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final items = body['data'] as List<dynamic>? ?? [];
@@ -36,7 +36,14 @@ class MaterialApiService {
         .toList();
   }
 
-  Future<StudyMaterial> upload({required File file, String? title}) async {
+  Future<StudyMaterial> upload({
+    File? file,
+    String? title,
+    int? disciplineId,
+    int? topicId,
+    String sourceType = 'pdf',
+    String? content,
+  }) async {
     final token = await _token();
     if (token == null) throw const MaterialApiException('auth_required');
     final request = http.MultipartRequest(
@@ -45,17 +52,23 @@ class MaterialApiService {
     )
       ..headers['Accept'] = 'application/json'
       ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+      ..fields['source_type'] = sourceType;
+    if (file != null) {
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    }
     if (title != null && title.trim().isNotEmpty) {
       request.fields['title'] = title.trim();
     }
+    if (disciplineId != null) request.fields['discipline_id'] = '$disciplineId';
+    if (topicId != null) request.fields['topic_id'] = '$topicId';
+    if (content != null) request.fields['content'] = content;
     final response = await request.send();
     final body = await response.stream.bytesToString();
     if (response.statusCode == 401) {
       throw const MaterialApiException('auth_required');
     }
     if (response.statusCode != 201) {
-      throw MaterialApiException('request_failed_\${response.statusCode}');
+      throw MaterialApiException('request_failed_${response.statusCode}');
     }
     final json = jsonDecode(body) as Map<String, dynamic>;
     return StudyMaterial.fromJson(json['data'] as Map<String, dynamic>);

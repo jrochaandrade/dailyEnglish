@@ -21,6 +21,11 @@ class ContestCardListNotifier extends AsyncNotifier<List<ContestCard>> {
     ref.invalidateSelf();
   }
 
+  Future<void> updateCard(ContestCard card) async {
+    await ref.read(contestCardRepositoryProvider).updateContent(card);
+    ref.invalidateSelf();
+  }
+
   Future<void> delete(int id) async {
     await ref.read(contestCardRepositoryProvider).delete(id);
     ref.invalidateSelf();

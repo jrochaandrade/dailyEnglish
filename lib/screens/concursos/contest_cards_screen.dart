@@ -157,11 +157,22 @@ class _ContestCardTile extends ConsumerWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
         trailing: PopupMenuButton<String>(
           onSelected: (action) async {
+            if (action == 'edit') {
+              context.push('/concursos/edit', extra: card);
+              return;
+            }
             if (action == 'delete' && card.id != null) {
               await ref.read(contestCardListProvider.notifier).delete(card.id!);
             }
           },
           itemBuilder: (_) => [
+            const PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Editar'),
+                )),
             PopupMenuItem(
                 value: 'delete',
                 child: Text('Excluir',
@@ -217,7 +228,9 @@ class _EmptyContestState extends StatelessWidget {
 }
 
 class ContestCardFormScreen extends ConsumerStatefulWidget {
-  const ContestCardFormScreen({super.key});
+  final ContestCard? card;
+
+  const ContestCardFormScreen({super.key, this.card});
   @override
   ConsumerState<ContestCardFormScreen> createState() =>
       _ContestCardFormScreenState();
@@ -232,6 +245,20 @@ class _ContestCardFormScreenState extends ConsumerState<ContestCardFormScreen> {
   final _note = TextEditingController();
   final _source = TextEditingController();
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final card = widget.card;
+    if (card != null) {
+      _subject.text = card.subject;
+      _deck.text = card.deck;
+      _front.text = card.front;
+      _back.text = card.back;
+      _note.text = card.note ?? '';
+      _source.text = card.source ?? '';
+    }
+  }
 
   Map<String, String> _parseClipboardText(String text) {
     final values = <String, String>{};
@@ -323,16 +350,26 @@ class _ContestCardFormScreenState extends ConsumerState<ContestCardFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     final now = DateTime.now();
-    await ref.read(contestCardListProvider.notifier).add(ContestCard(
-          subject: _subject.text.trim(),
-          deck: _deck.text.trim(),
-          front: _front.text.trim(),
-          back: _back.text.trim(),
-          note: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          source: _source.text.trim().isEmpty ? null : _source.text.trim(),
-          createdAt: now,
-          updatedAt: now,
-        ));
+    final card = ContestCard(
+      id: widget.card?.id,
+      subject: _subject.text.trim(),
+      deck: _deck.text.trim(),
+      front: _front.text.trim(),
+      back: _back.text.trim(),
+      note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      source: _source.text.trim().isEmpty ? null : _source.text.trim(),
+      createdAt: widget.card?.createdAt ?? now,
+      updatedAt: now,
+      nextReviewAt: widget.card?.nextReviewAt,
+      easeFactor: widget.card?.easeFactor ?? 2.5,
+      repetitions: widget.card?.repetitions ?? 0,
+      interval: widget.card?.interval ?? 0,
+    );
+    if (widget.card == null) {
+      await ref.read(contestCardListProvider.notifier).add(card);
+    } else {
+      await ref.read(contestCardListProvider.notifier).updateCard(card);
+    }
     if (mounted) context.pop();
   }
 
@@ -342,7 +379,7 @@ class _ContestCardFormScreenState extends ConsumerState<ContestCardFormScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title: const Text('Novo cartão'),
+            title: Text(widget.card == null ? 'Novo cartão' : 'Editar cartão'),
             leading: const BackButton(),
             actions: [
               PopupMenuButton<String>(
@@ -454,7 +491,9 @@ class _ContestCardFormScreenState extends ConsumerState<ContestCardFormScreen> {
 class ContestReviewScreen extends ConsumerStatefulWidget {
   final String? subject;
   final String? deck;
-  const ContestReviewScreen({super.key, this.subject, this.deck});
+  final String mode;
+  const ContestReviewScreen(
+      {super.key, this.subject, this.deck, this.mode = 'due'});
   @override
   ConsumerState<ContestReviewScreen> createState() =>
       _ContestReviewScreenState();
@@ -474,9 +513,18 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
   }
 
   Future<void> _load() async {
-    final cards = await ref
-        .read(contestCardRepositoryProvider)
-        .getDue(subject: widget.subject, deck: widget.deck);
+    final repository = ref.read(contestCardRepositoryProvider);
+    final all =
+        await repository.getAll(subject: widget.subject, deck: widget.deck);
+    final cards = switch (widget.mode) {
+      'all' => all,
+      'difficult' => all.where((card) => card.easeFactor < 2.5).toList(),
+      _ => all
+          .where((card) =>
+              card.nextReviewAt == null ||
+              !card.nextReviewAt!.isAfter(DateTime.now()))
+          .toList(),
+    };
     if (mounted) {
       setState(() {
         _cards = cards;
@@ -564,35 +612,17 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 16),
           Expanded(
-            child: Card(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(card.front,
-                          style: GoogleFonts.nunito(
-                              fontSize: 22, fontWeight: FontWeight.w900)),
-                      if (_revealed) ...[
-                        const Divider(height: 36),
-                        Text(card.back,
-                            style: GoogleFonts.nunito(fontSize: 18)),
-                        if (card.note != null) ...[
-                          const SizedBox(height: 20),
-                          Text(card.note!,
-                              style: GoogleFonts.nunito(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant)),
-                        ],
-                        if (card.source != null) ...[
-                          const SizedBox(height: 8),
-                          Text('Fonte: ${card.source}',
-                              style: GoogleFonts.nunito(
-                                  fontSize: 13, fontStyle: FontStyle.italic)),
-                        ],
-                      ],
-                    ]),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: _ContestFlipCard(
+                  front: card.front,
+                  back: card.back,
+                  note: card.note,
+                  source: card.source,
+                  revealed: _revealed,
+                  onTap: () => setState(() => _revealed = !_revealed),
+                ),
               ),
             ),
           ),
@@ -615,6 +645,142 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
                     child: Text(item.$2)),
             ]),
         ]),
+      ),
+    );
+  }
+}
+
+class _ContestFlipCard extends StatefulWidget {
+  final String front;
+  final String back;
+  final String? note;
+  final String? source;
+  final bool revealed;
+  final VoidCallback onTap;
+
+  const _ContestFlipCard({
+    required this.front,
+    required this.back,
+    required this.note,
+    required this.source,
+    required this.revealed,
+    required this.onTap,
+  });
+
+  @override
+  State<_ContestFlipCard> createState() => _ContestFlipCardState();
+}
+
+class _ContestFlipCardState extends State<_ContestFlipCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 480),
+  );
+
+  @override
+  void didUpdateWidget(covariant _ContestFlipCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.revealed != widget.revealed) {
+      widget.revealed ? _controller.forward() : _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final angle = _controller.value * 3.141592653589793;
+          final showBack = _controller.value >= .5;
+          final content = showBack
+              ? _ContestCardFace(
+                  label: 'Resposta',
+                  text: widget.back,
+                  note: widget.note,
+                  source: widget.source,
+                  icon: Icons.lightbulb_outline_rounded,
+                )
+              : _ContestCardFace(
+                  label: 'Pergunta',
+                  text: widget.front,
+                  icon: Icons.help_outline_rounded,
+                );
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0012)
+              ..rotateY(showBack ? angle - 3.141592653589793 : angle),
+            child: content,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ContestCardFace extends StatelessWidget {
+  final String label;
+  final String text;
+  final String? note;
+  final String? source;
+  final IconData icon;
+
+  const _ContestCardFace({
+    required this.label,
+    required this.text,
+    required this.icon,
+    this.note,
+    this.source,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: SizedBox(
+        height: 350,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: AppTheme.secondary, size: 30),
+              const SizedBox(height: 16),
+              Text(label.toUpperCase(),
+                  style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w900,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 14),
+              Text(text,
+                  style: GoogleFonts.nunito(
+                      fontSize: 22, fontWeight: FontWeight.w900, height: 1.25)),
+              if (note != null) ...[
+                const Divider(height: 34),
+                Text(note!,
+                    style: GoogleFonts.nunito(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        height: 1.35)),
+              ],
+              if (source != null) ...[
+                const SizedBox(height: 12),
+                Text('Fonte: $source',
+                    style: GoogleFonts.nunito(
+                        fontSize: 13, fontStyle: FontStyle.italic)),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

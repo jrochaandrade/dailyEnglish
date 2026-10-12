@@ -17,8 +17,7 @@ class PhrasalVerbFormScreen extends ConsumerStatefulWidget {
       _PhrasalVerbFormScreenState();
 }
 
-class _PhrasalVerbFormScreenState
-    extends ConsumerState<PhrasalVerbFormScreen> {
+class _PhrasalVerbFormScreenState extends ConsumerState<PhrasalVerbFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isEditing = false;
@@ -68,8 +67,7 @@ class _PhrasalVerbFormScreenState
 
   Future<void> _loadPhrasalVerb() async {
     try {
-      final pv =
-          await ref.read(phrasalVerbDetailProvider(widget.pvId!).future);
+      final pv = await ref.read(phrasalVerbDetailProvider(widget.pvId!).future);
       if (pv == null || !mounted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -115,10 +113,15 @@ class _PhrasalVerbFormScreenState
       return;
     }
     _debounceTimer = Timer(const Duration(milliseconds: 600), () async {
-      final results = await ref.read(phrasalVerbRepositoryProvider).search(base);
-      final exact = results.where(
-        (pv) => pv.baseVerb.toLowerCase() == base.toLowerCase() && pv.particle.toLowerCase() == part.toLowerCase(),
-      ).toList();
+      final results =
+          await ref.read(phrasalVerbRepositoryProvider).search(base);
+      final exact = results
+          .where(
+            (pv) =>
+                pv.baseVerb.toLowerCase() == base.toLowerCase() &&
+                pv.particle.toLowerCase() == part.toLowerCase(),
+          )
+          .toList();
       if (mounted) {
         setState(() => _duplicatePV = exact.isNotEmpty ? exact.first : null);
       }
@@ -236,8 +239,10 @@ class _PhrasalVerbFormScreenState
       if (meaningEn == null && meaningPt == null) {
         final block = extractValue('Meaning:');
         if (block != null) {
-          final enMatch = RegExp(r'EN:\s*(.+?)(?=PT(?:-BR)?:|$)', dotAll: true).firstMatch(block);
-          final ptMatch = RegExp(r'PT(?:-BR)?:\s*(.+?)$', dotAll: true).firstMatch(block);
+          final enMatch = RegExp(r'EN:\s*(.+?)(?=PT(?:-BR)?:|$)', dotAll: true)
+              .firstMatch(block);
+          final ptMatch =
+              RegExp(r'PT(?:-BR)?:\s*(.+?)$', dotAll: true).firstMatch(block);
           meaningEn = enMatch?.group(1)?.trim();
           meaningPt = ptMatch?.group(1)?.trim();
         }
@@ -313,7 +318,11 @@ class _PhrasalVerbFormScreenState
             : 'Phrasal verb salvo com sucesso!'),
         backgroundColor: AppTheme.tertiary,
       ));
-      if (context.canPop()) { context.pop(); } else { context.go('/phrasal-verbs'); }
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/phrasal-verbs');
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -331,7 +340,10 @@ class _PhrasalVerbFormScreenState
       return Scaffold(
         appBar: AppBar(
           title: Text(_isEditing ? 'Edit Phrasal Verb' : 'Add Phrasal Verb'),
-          leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/phrasal-verbs')),
+          leading: BackButton(
+              onPressed: () => context.canPop()
+                  ? context.pop()
+                  : context.go('/phrasal-verbs')),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -340,7 +352,10 @@ class _PhrasalVerbFormScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Phrasal Verb' : 'Add Phrasal Verb'),
-        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/phrasal-verbs')),
+        leading: BackButton(
+            onPressed: () => context.canPop()
+                ? context.pop()
+                : context.go('/phrasal-verbs')),
         actions: [
           IconButton(
             icon: const Icon(Icons.content_paste_rounded),
@@ -388,18 +403,15 @@ class _PhrasalVerbFormScreenState
             const SizedBox(height: 12),
             _Field(controller: _example1Ctrl, label: 'Example 1'),
             const SizedBox(height: 12),
-            _Field(
-                controller: _exTrans1Ctrl, label: 'Example 1 Translation'),
+            _Field(controller: _exTrans1Ctrl, label: 'Example 1 Translation'),
             const SizedBox(height: 12),
             _Field(controller: _example2Ctrl, label: 'Example 2'),
             const SizedBox(height: 12),
-            _Field(
-                controller: _exTrans2Ctrl, label: 'Example 2 Translation'),
+            _Field(controller: _exTrans2Ctrl, label: 'Example 2 Translation'),
             const SizedBox(height: 12),
             _Field(controller: _example3Ctrl, label: 'Example 3'),
             const SizedBox(height: 12),
-            _Field(
-                controller: _exTrans3Ctrl, label: 'Example 3 Translation'),
+            _Field(controller: _exTrans3Ctrl, label: 'Example 3 Translation'),
             const SizedBox(height: 20),
             const _SectionLabel('DIFFICULTY'),
             Row(
@@ -555,7 +567,8 @@ class _DuplicateWarning extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const Icon(Icons.warning_amber_rounded,
+              color: AppTheme.warning, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(

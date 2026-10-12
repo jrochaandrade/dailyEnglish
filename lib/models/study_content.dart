@@ -3,6 +3,7 @@ class StudyContent {
   final String status;
   final String? title;
   final String? materialTitle;
+  final String? disciplineName;
   final String topicName;
   final String? summary;
   final List<Map<String, dynamic>> flashcards;
@@ -13,6 +14,7 @@ class StudyContent {
     required this.status,
     this.title,
     this.materialTitle,
+    this.disciplineName,
     required this.topicName,
     this.summary,
     this.flashcards = const [],
@@ -22,6 +24,7 @@ class StudyContent {
   factory StudyContent.fromJson(Map<String, dynamic> json) {
     final material = json['material'] as Map<String, dynamic>? ?? {};
     final topic = material['topic'] as Map<String, dynamic>? ?? {};
+    final discipline = material['discipline'] as Map<String, dynamic>? ?? {};
 
     return StudyContent(
       id: json['id'] as int,
@@ -29,6 +32,7 @@ class StudyContent {
       title: json['title'] as String?,
       materialTitle: material['title'] as String? ??
           material['original_filename'] as String?,
+      disciplineName: discipline['name'] as String?,
       topicName: topic['name'] as String? ?? 'Sem tópico',
       summary: json['summary'] as String?,
       flashcards: _mapList(json['flashcards']),

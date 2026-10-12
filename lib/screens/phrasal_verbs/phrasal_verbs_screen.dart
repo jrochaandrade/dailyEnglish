@@ -6,11 +6,17 @@ import '../../providers/phrasal_verb_provider.dart';
 import '../../models/phrasal_verb.dart';
 import '../../core/theme/app_theme.dart';
 
-Color _pvStatusColor(String s) =>
-    s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
+Color _pvStatusColor(String s) => s == 'learned'
+    ? AppTheme.primary
+    : s == 'difficult'
+        ? AppTheme.error
+        : AppTheme.secondary;
 
-String _pvStatusLabel(String s) =>
-    s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
+String _pvStatusLabel(String s) => s == 'learning'
+    ? 'Learning'
+    : s == 'learned'
+        ? 'Learned'
+        : 'Difficult';
 
 class PhrasalVerbsScreen extends ConsumerStatefulWidget {
   const PhrasalVerbsScreen({super.key});
@@ -120,8 +126,7 @@ class _PhrasalVerbsScreenState extends ConsumerState<PhrasalVerbsScreen> {
                       child: FilterChip(
                         label: Text(statusLabels[s]!),
                         selected: _selectedStatus == s,
-                        selectedColor:
-                            statusColors[s]!.withValues(alpha: 0.15),
+                        selectedColor: statusColors[s]!.withValues(alpha: 0.15),
                         checkmarkColor: statusColors[s],
                         labelStyle: GoogleFonts.nunito(
                           fontSize: 13,

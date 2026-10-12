@@ -94,7 +94,9 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
         createdAt: widget.initialSession?.createdAt ?? DateTime.now(),
       );
       if (widget.initialSession != null) {
-        await ref.read(studySessionListProvider.notifier).updateSession(session);
+        await ref
+            .read(studySessionListProvider.notifier)
+            .updateSession(session);
       } else {
         await ref.read(studySessionListProvider.notifier).addSession(session);
       }
@@ -120,7 +122,8 @@ class _StudySessionFormState extends ConsumerState<StudySessionForm> {
         children: [
           Text(
             isEdit ? 'Edit Session' : 'Register Study',
-            style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900),
+            style:
+                GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 20),
           Text('Study type',

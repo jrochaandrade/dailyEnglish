@@ -6,11 +6,17 @@ import '../../providers/phrase_provider.dart';
 import '../../models/phrase.dart';
 import '../../core/theme/app_theme.dart';
 
-Color _statusColor(String s) =>
-    s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
+Color _statusColor(String s) => s == 'learned'
+    ? AppTheme.primary
+    : s == 'difficult'
+        ? AppTheme.error
+        : AppTheme.secondary;
 
-String _statusLabel(String s) =>
-    s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
+String _statusLabel(String s) => s == 'learning'
+    ? 'Learning'
+    : s == 'learned'
+        ? 'Learned'
+        : 'Difficult';
 
 class PhrasesScreen extends ConsumerStatefulWidget {
   const PhrasesScreen({super.key});
@@ -140,7 +146,8 @@ class _PhrasesScreenState extends ConsumerState<PhrasesScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => const Center(child: Text('Erro ao carregar frases.')),
+              error: (e, _) =>
+                  const Center(child: Text('Erro ao carregar frases.')),
             ),
           ),
         ],

@@ -62,7 +62,8 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
 
   Future<void> _loadPhrase() async {
     try {
-      final phrase = await ref.read(phraseDetailProvider(widget.phraseId!).future);
+      final phrase =
+          await ref.read(phraseDetailProvider(widget.phraseId!).future);
       if (phrase == null || !mounted) {
         if (mounted) context.go('/phrases');
         return;
@@ -97,11 +98,14 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
     }
     _debounceTimer = Timer(const Duration(milliseconds: 600), () async {
       final results = await ref.read(phraseRepositoryProvider).search(value);
-      final exact = results.where(
-        (p) => p.phrase.toLowerCase() == value.toLowerCase(),
-      ).toList();
+      final exact = results
+          .where(
+            (p) => p.phrase.toLowerCase() == value.toLowerCase(),
+          )
+          .toList();
       if (mounted) {
-        setState(() => _duplicatePhrase = exact.isNotEmpty ? exact.first : null);
+        setState(
+            () => _duplicatePhrase = exact.isNotEmpty ? exact.first : null);
       }
     });
   }
@@ -141,9 +145,19 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
     final text = data.text!;
 
     const allLabels = [
-      'Phrase:', 'Word:', 'Translation:', 'Meaning:', 'Meaning (EN):', 'Meaning (PT):',
-      'Examples:', 'Example translations:', 'Synonyms:', 'Opposite:',
-      'Category:', 'Difficulty level:', 'Learning status:',
+      'Phrase:',
+      'Word:',
+      'Translation:',
+      'Meaning:',
+      'Meaning (EN):',
+      'Meaning (PT):',
+      'Examples:',
+      'Example translations:',
+      'Synonyms:',
+      'Opposite:',
+      'Category:',
+      'Difficulty level:',
+      'Learning status:',
     ];
 
     String? extractValue(String label) {
@@ -189,11 +203,14 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
       if (meaningEn == null && meaningPt == null) {
         final block = extractValue('Meaning:');
         if (block != null) {
-          final enMatch = RegExp(r'EN:\s*(.+?)(?=PT(?:-BR)?:|$)', dotAll: true).firstMatch(block);
-          final ptMatch = RegExp(r'PT(?:-BR)?:\s*(.+?)$', dotAll: true).firstMatch(block);
+          final enMatch = RegExp(r'EN:\s*(.+?)(?=PT(?:-BR)?:|$)', dotAll: true)
+              .firstMatch(block);
+          final ptMatch =
+              RegExp(r'PT(?:-BR)?:\s*(.+?)$', dotAll: true).firstMatch(block);
           meaningEn = enMatch?.group(1)?.trim();
           meaningPt = ptMatch?.group(1)?.trim();
-          if (meaningEn == null && enMatch == null && ptMatch == null) meaningEn = block;
+          if (meaningEn == null && enMatch == null && ptMatch == null)
+            meaningEn = block;
         }
       }
       if (meaningEn != null) _meaningEnCtrl.text = meaningEn;
@@ -264,7 +281,11 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
         content: Text(_isEditing ? 'Frase atualizada!' : 'Frase salva!'),
         backgroundColor: AppTheme.secondary,
       ));
-      if (context.canPop()) { context.pop(); } else { context.go('/phrases'); }
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/phrases');
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -282,7 +303,9 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
       return Scaffold(
         appBar: AppBar(
           title: Text(_isEditing ? 'Edit Phrase' : 'Add Phrase'),
-          leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/phrases')),
+          leading: BackButton(
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/phrases')),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -291,7 +314,9 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Phrase' : 'Add Phrase'),
-        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/phrases')),
+        leading: BackButton(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/phrases')),
         actions: [
           IconButton(
             icon: const Icon(Icons.content_paste_rounded),
@@ -306,10 +331,17 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             const _SectionLabel('REQUIRED'),
-            _Field(controller: _phraseCtrl, label: 'Phrase (English)', validator: _notEmpty),
-            if (_duplicatePhrase != null) _DuplicateWarning(phrase: _duplicatePhrase!),
+            _Field(
+                controller: _phraseCtrl,
+                label: 'Phrase (English)',
+                validator: _notEmpty),
+            if (_duplicatePhrase != null)
+              _DuplicateWarning(phrase: _duplicatePhrase!),
             const SizedBox(height: 12),
-            _Field(controller: _translationCtrl, label: 'Translation (Portuguese)', validator: _notEmpty),
+            _Field(
+                controller: _translationCtrl,
+                label: 'Translation (Portuguese)',
+                validator: _notEmpty),
             const SizedBox(height: 20),
             const _SectionLabel('DETAILS'),
             _Field(controller: _meaningEnCtrl, label: 'Meaning (English)'),
@@ -331,18 +363,37 @@ class _PhraseFormScreenState extends ConsumerState<PhraseFormScreen> {
             const _SectionLabel('DIFFICULTY'),
             Row(
               children: [
-                _DiffChip(label: 'Easy', value: 1, selected: _difficulty == 1, color: AppTheme.primary, onTap: () => setState(() => _difficulty = 1)),
+                _DiffChip(
+                    label: 'Easy',
+                    value: 1,
+                    selected: _difficulty == 1,
+                    color: AppTheme.primary,
+                    onTap: () => setState(() => _difficulty = 1)),
                 const SizedBox(width: 8),
-                _DiffChip(label: 'Medium', value: 2, selected: _difficulty == 2, color: AppTheme.warning, onTap: () => setState(() => _difficulty = 2)),
+                _DiffChip(
+                    label: 'Medium',
+                    value: 2,
+                    selected: _difficulty == 2,
+                    color: AppTheme.warning,
+                    onTap: () => setState(() => _difficulty = 2)),
                 const SizedBox(width: 8),
-                _DiffChip(label: 'Hard', value: 3, selected: _difficulty == 3, color: AppTheme.error, onTap: () => setState(() => _difficulty = 3)),
+                _DiffChip(
+                    label: 'Hard',
+                    value: 3,
+                    selected: _difficulty == 3,
+                    color: AppTheme.error,
+                    onTap: () => setState(() => _difficulty = 3)),
               ],
             ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _isLoading ? null : _save,
               child: _isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
                   : const Text('Save'),
             ),
             const SizedBox(height: 24),
@@ -398,7 +449,12 @@ class _DiffChip extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _DiffChip({required this.label, required this.value, required this.selected, required this.color, required this.onTap});
+  const _DiffChip(
+      {required this.label,
+      required this.value,
+      required this.selected,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -407,16 +463,20 @@ class _DiffChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
+          color:
+              selected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? color : Colors.transparent, width: 2),
+          border: Border.all(
+              color: selected ? color : Colors.transparent, width: 2),
         ),
         child: Text(
           label,
           style: GoogleFonts.nunito(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: selected
+                ? color
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -440,7 +500,8 @@ class _DuplicateWarning extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const Icon(Icons.warning_amber_rounded,
+              color: AppTheme.warning, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(

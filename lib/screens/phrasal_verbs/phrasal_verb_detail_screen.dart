@@ -10,20 +10,29 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
   final int pvId;
   const PhrasalVerbDetailScreen({super.key, required this.pvId});
 
-  Color _statusColor(String s) =>
-      s == 'learned'
-          ? AppTheme.primary
-          : s == 'difficult'
-              ? AppTheme.error
-              : AppTheme.secondary;
+  Color _statusColor(String s) => s == 'learned'
+      ? AppTheme.primary
+      : s == 'difficult'
+          ? AppTheme.error
+          : AppTheme.secondary;
 
-  String _statusLabel(String s) =>
-      s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
+  String _statusLabel(String s) => s == 'learning'
+      ? 'Learning'
+      : s == 'learned'
+          ? 'Learned'
+          : 'Difficult';
 
-  Color _diffColor(int d) =>
-      d == 1 ? AppTheme.primary : d == 2 ? AppTheme.warning : AppTheme.error;
+  Color _diffColor(int d) => d == 1
+      ? AppTheme.primary
+      : d == 2
+          ? AppTheme.warning
+          : AppTheme.error;
 
-  String _diffLabel(int d) => d == 1 ? 'Easy' : d == 2 ? 'Medium' : 'Hard';
+  String _diffLabel(int d) => d == 1
+      ? 'Easy'
+      : d == 2
+          ? 'Medium'
+          : 'Hard';
 
   TextStyle _bodyStyle(BuildContext context) => GoogleFonts.nunito(
         fontSize: 15,
@@ -38,7 +47,8 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Phrasal Verb'),
         leading: BackButton(
-          onPressed: () => context.canPop() ? context.pop() : context.go('/phrasal-verbs'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/phrasal-verbs'),
         ),
         actions: [
           IconButton(
@@ -50,8 +60,7 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
       body: pvAsync.when(
         data: (pv) {
           if (pv == null) {
-            return const Center(
-                child: Text('Phrasal verb não encontrado.'));
+            return const Center(child: Text('Phrasal verb não encontrado.'));
           }
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -72,8 +81,7 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                               style: GoogleFonts.nunito(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
-                                color:
-                                    Theme.of(context).colorScheme.onSurface,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -81,7 +89,8 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                             icon: const Icon(Icons.volume_up_rounded),
                             color: AppTheme.tertiary,
                             tooltip: 'Ouvir pronúncia',
-                            onPressed: () => ref.read(audioServiceProvider).speak(pv.verb),
+                            onPressed: () =>
+                                ref.read(audioServiceProvider).speak(pv.verb),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -108,9 +117,7 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                         style: GoogleFonts.nunito(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -130,14 +137,19 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: Text(pv.meaningEn!, style: _bodyStyle(context))),
+                            Expanded(
+                                child: Text(pv.meaningEn!,
+                                    style: _bodyStyle(context))),
                             IconButton(
-                              icon: const Icon(Icons.volume_up_rounded, size: 18),
+                              icon:
+                                  const Icon(Icons.volume_up_rounded, size: 18),
                               color: AppTheme.tertiary,
                               padding: const EdgeInsets.only(left: 4),
                               constraints: const BoxConstraints(),
                               visualDensity: VisualDensity.compact,
-                              onPressed: () => ref.read(audioServiceProvider).speak(pv.meaningEn!),
+                              onPressed: () => ref
+                                  .read(audioServiceProvider)
+                                  .speak(pv.meaningEn!),
                             ),
                           ],
                         ),
@@ -147,9 +159,8 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                         Text(
                           pv.meaningPt!,
                           style: _bodyStyle(context).copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
@@ -168,11 +179,32 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (pv.example1 != null)
-                        _ExampleItem(number: 1, text: pv.example1!, translation: pv.exampleTranslation1, bodyStyle: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(pv.example1!)),
+                        _ExampleItem(
+                            number: 1,
+                            text: pv.example1!,
+                            translation: pv.exampleTranslation1,
+                            bodyStyle: _bodyStyle(context),
+                            onSpeak: () => ref
+                                .read(audioServiceProvider)
+                                .speak(pv.example1!)),
                       if (pv.example2 != null)
-                        _ExampleItem(number: 2, text: pv.example2!, translation: pv.exampleTranslation2, bodyStyle: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(pv.example2!)),
+                        _ExampleItem(
+                            number: 2,
+                            text: pv.example2!,
+                            translation: pv.exampleTranslation2,
+                            bodyStyle: _bodyStyle(context),
+                            onSpeak: () => ref
+                                .read(audioServiceProvider)
+                                .speak(pv.example2!)),
                       if (pv.example3 != null)
-                        _ExampleItem(number: 3, text: pv.example3!, translation: pv.exampleTranslation3, bodyStyle: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(pv.example3!)),
+                        _ExampleItem(
+                            number: 3,
+                            text: pv.example3!,
+                            translation: pv.exampleTranslation3,
+                            bodyStyle: _bodyStyle(context),
+                            onSpeak: () => ref
+                                .read(audioServiceProvider)
+                                .speak(pv.example3!)),
                     ],
                   ),
                 ),
@@ -183,11 +215,10 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
               _InfoCard(
                 title: 'DIFFICULTY',
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _diffColor(pv.difficulty)
-                        .withValues(alpha: 0.15),
+                    color: _diffColor(pv.difficulty).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -232,8 +263,7 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text(
-                                      'Erro ao atualizar o status.')),
+                                  content: Text('Erro ao atualizar o status.')),
                             );
                           }
                         },
@@ -314,10 +344,13 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                     .deletePhrasalVerb(pvId);
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Phrasal verb removido.')),
+                  const SnackBar(content: Text('Phrasal verb removido.')),
                 );
-                if (context.canPop()) { context.pop(); } else { context.go('/phrasal-verbs'); }
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/phrasal-verbs');
+                }
               } catch (_) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -326,8 +359,8 @@ class PhrasalVerbDetailScreen extends ConsumerWidget {
                 );
               }
             },
-            child: const Text('Remover',
-                style: TextStyle(color: AppTheme.error)),
+            child:
+                const Text('Remover', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),

@@ -22,11 +22,15 @@ import '../../screens/games/sentence_scramble_screen.dart';
 import '../../screens/games/english_quest_screen.dart';
 import '../../screens/games/game_content.dart';
 import '../../screens/study/study_log_screen.dart';
+import '../../screens/concursos/contest_home_screen.dart';
 import '../../screens/concursos/contest_cards_screen.dart';
+import '../../screens/concursos/contest_performance_screen.dart';
+import '../../models/contest_card.dart';
 import '../../screens/start/start_screen.dart';
 import '../../screens/materials/materials_screen.dart';
 import '../../screens/materials/study_content_screen.dart';
 import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/auth_gate.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -34,7 +38,7 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const StartScreen(),
+      builder: (context, state) => const AuthLandingScreen(),
     ),
     GoRoute(
       path: '/ingles',
@@ -184,30 +188,53 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/concursos',
-      builder: (context, state) => const ContestCardsScreen(),
+      builder: (context, state) => const AuthGate(child: ContestHomeScreen()),
     ),
     GoRoute(
       path: '/materials',
-      builder: (context, state) => const MaterialsScreen(),
+      builder: (context, state) => const AuthGate(child: MaterialsScreen()),
     ),
     GoRoute(
       path: '/study-content',
-      builder: (context, state) => const StudyContentScreen(),
+      builder: (context, state) => AuthGate(
+        child: StudyContentScreen(
+          type: state.uri.queryParameters['type'],
+        ),
+      ),
     ),
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
+      path: '/areas',
+      builder: (context, state) => const AuthGate(child: StartScreen()),
+    ),
+    GoRoute(
       path: '/concursos/new',
-      builder: (context, state) => const ContestCardFormScreen(),
+      builder: (context, state) =>
+          const AuthGate(child: ContestCardFormScreen()),
+    ),
+    GoRoute(
+      path: '/concursos/edit',
+      builder: (context, state) => AuthGate(
+        child: ContestCardFormScreen(card: state.extra as ContestCard?),
+      ),
     ),
     GoRoute(
       path: '/concursos/review',
-      builder: (context, state) => ContestReviewScreen(
-        subject: state.uri.queryParameters['subject'],
-        deck: state.uri.queryParameters['deck'],
+      builder: (context, state) => AuthGate(
+        child: ContestReviewScreen(
+          subject: state.uri.queryParameters['subject'],
+          deck: state.uri.queryParameters['deck'],
+          mode: state.uri.queryParameters['mode'] ?? 'due',
+        ),
       ),
+    ),
+    GoRoute(
+      path: '/concursos/performance',
+      builder: (context, state) =>
+          const AuthGate(child: ContestPerformanceScreen()),
     ),
   ],
 );

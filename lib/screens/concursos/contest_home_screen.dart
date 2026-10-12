@@ -1,0 +1,116 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/services/auth_api_service.dart';
+
+class ContestHomeScreen extends StatefulWidget {
+  const ContestHomeScreen({super.key});
+
+  @override
+  State<ContestHomeScreen> createState() => _ContestHomeScreenState();
+}
+
+class _ContestHomeScreenState extends State<ContestHomeScreen> {
+  Future<void> _logout() async {
+    await AuthApiService().logout();
+    if (mounted) context.go('/login');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Concursos'),
+        leading: IconButton(
+          tooltip: 'Áreas de estudo',
+          onPressed: () => context.go('/areas'),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Sair',
+            onPressed: _logout,
+            icon: const Icon(Icons.logout_rounded),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Text('Área de estudos',
+              style: GoogleFonts.nunito(
+                  fontSize: 26, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          Text('Acesse seus materiais e conteúdos gerados pela IA.',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 24),
+          _AreaCard(
+            icon: Icons.picture_as_pdf_rounded,
+            title: 'Materiais',
+            description: 'Inclua e acompanhe os PDFs enviados.',
+            onTap: () => context.push('/materials'),
+          ),
+          _AreaCard(
+            icon: Icons.style_rounded,
+            title: 'Flashcards',
+            description: 'Revise os cartões organizados por tópico.',
+            onTap: () => context.push('/study-content?type=flashcards'),
+          ),
+          _AreaCard(
+            icon: Icons.quiz_rounded,
+            title: 'Perguntas',
+            description: 'Responda questões e confira o gabarito.',
+            onTap: () => context.push('/study-content?type=questions'),
+          ),
+          _AreaCard(
+            icon: Icons.article_rounded,
+            title: 'Resumos',
+            description: 'Consulte os resumos gerados a partir dos materiais.',
+            onTap: () => context.push('/study-content?type=summaries'),
+          ),
+          _AreaCard(
+            icon: Icons.insights_rounded,
+            title: 'Desempenho',
+            description: 'Veja sua ofensiva, revisões e cartões difíceis.',
+            onTap: () => context.push('/concursos/performance'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AreaCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  const _AreaCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.primary.withValues(alpha: .12),
+          child: Icon(icon, color: AppTheme.primary),
+        ),
+        title:
+            Text(title, style: GoogleFonts.nunito(fontWeight: FontWeight.w900)),
+        subtitle: Text(description),
+        trailing: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}

@@ -24,16 +24,98 @@ class GameItem {
 }
 
 const _kStopWords = {
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'shall', 'can', 'to', 'of', 'in', 'on', 'at',
-  'by', 'for', 'with', 'from', 'and', 'but', 'or', 'so', 'yet', 'nor',
-  'not', 'no', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him',
-  'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their',
-  'this', 'that', 'these', 'those', 'if', 'as', 'up', 'out', 'more',
-  'also', 'very', 'just', 'than', 'then', 'when', 'where', 'who',
-  'which', 'what', 'how', 'about', 'after', 'before', 'into', 'over',
-  'under', 'some', 'such', 'each', 'both', 'even', 'much', 'too',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'to',
+  'of',
+  'in',
+  'on',
+  'at',
+  'by',
+  'for',
+  'with',
+  'from',
+  'and',
+  'but',
+  'or',
+  'so',
+  'yet',
+  'nor',
+  'not',
+  'no',
+  'i',
+  'you',
+  'he',
+  'she',
+  'it',
+  'we',
+  'they',
+  'me',
+  'him',
+  'her',
+  'us',
+  'them',
+  'my',
+  'your',
+  'his',
+  'its',
+  'our',
+  'their',
+  'this',
+  'that',
+  'these',
+  'those',
+  'if',
+  'as',
+  'up',
+  'out',
+  'more',
+  'also',
+  'very',
+  'just',
+  'than',
+  'then',
+  'when',
+  'where',
+  'who',
+  'which',
+  'what',
+  'how',
+  'about',
+  'after',
+  'before',
+  'into',
+  'over',
+  'under',
+  'some',
+  'such',
+  'each',
+  'both',
+  'even',
+  'much',
+  'too',
 };
 
 List<String> _extractSentences(String text) {
@@ -126,9 +208,13 @@ Future<List<GameItem>> loadGameItems(GameSource source, WidgetRef ref) async {
 
 String gameSourceLabel(GameSource s) {
   switch (s) {
-    case GameSource.words: return 'Words';
-    case GameSource.phrasalVerbs: return 'Phrasal Verbs';
-    case GameSource.phrases: return 'Daily Phrases';
-    case GameSource.diary: return 'My Diary';
+    case GameSource.words:
+      return 'Words';
+    case GameSource.phrasalVerbs:
+      return 'Phrasal Verbs';
+    case GameSource.phrases:
+      return 'Daily Phrases';
+    case GameSource.diary:
+      return 'My Diary';
   }
 }

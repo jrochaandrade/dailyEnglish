@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/auth_api_service.dart';
 
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
@@ -9,6 +10,19 @@ class StartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Áreas de estudo'),
+        actions: [
+          IconButton(
+            tooltip: 'Sair',
+            onPressed: () async {
+              await AuthApiService().logout();
+              if (context.mounted) context.go('/login');
+            },
+            icon: const Icon(Icons.logout_rounded),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -59,20 +73,6 @@ class StartScreen extends StatelessWidget {
                   description: 'Flashcards organizados por matéria e assunto',
                   color: AppTheme.secondary,
                   onTap: () => context.go('/concursos'),
-                ),
-                const SizedBox(height: 16),
-                _StudyAreaCard(
-                  icon: Icons.picture_as_pdf_rounded,
-                  title: 'Materiais',
-                  description: 'PDFs para preparar resumos e revisões',
-                  color: AppTheme.tertiary,
-                  onTap: () => context.go('/materials'),
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () => context.go('/login'),
-                  icon: const Icon(Icons.login_rounded),
-                  label: const Text('Entrar ou criar conta'),
                 ),
               ],
             ),

@@ -58,7 +58,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
       final tContent = await translationService.translate(entry.content);
       String? tCorrected;
       if (entry.correctedContent != null) {
-        tCorrected = await translationService.translate(entry.correctedContent!);
+        tCorrected =
+            await translationService.translate(entry.correctedContent!);
       }
 
       if (mounted) {
@@ -71,7 +72,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isTranslating = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erro ao traduzir.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Erro ao traduzir.')));
       }
     }
   }
@@ -83,7 +85,9 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Entry Details'),
-        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/diary')),
+        leading: BackButton(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/diary')),
         actions: [
           IconButton(
             icon: const Icon(Icons.volume_up_rounded),
@@ -98,14 +102,25 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
           ),
           IconButton(
             icon: _isTranslating
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : Icon(_translatedContent == null ? Icons.translate : Icons.g_translate, color: _translatedContent == null ? null : AppTheme.secondary),
-            onPressed: _isTranslating ? null : () {
-              entryAsync.whenData((entry) {
-                if (entry != null) _translate(entry);
-              });
-            },
-            tooltip: _translatedContent == null ? 'Traduzir tudo' : 'Ver original',
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(
+                    _translatedContent == null
+                        ? Icons.translate
+                        : Icons.g_translate,
+                    color:
+                        _translatedContent == null ? null : AppTheme.secondary),
+            onPressed: _isTranslating
+                ? null
+                : () {
+                    entryAsync.whenData((entry) {
+                      if (entry != null) _translate(entry);
+                    });
+                  },
+            tooltip:
+                _translatedContent == null ? 'Traduzir tudo' : 'Ver original',
           ),
           IconButton(
             icon: const Icon(Icons.edit_rounded),
@@ -115,8 +130,10 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
       ),
       body: entryAsync.when(
         data: (entry) {
-          if (entry == null) return const Center(child: Text('Entrada não encontrada.'));
-          final dateStr = "${entry.createdAt.day.toString().padLeft(2, '0')}/${entry.createdAt.month.toString().padLeft(2, '0')}/${entry.createdAt.year}";
+          if (entry == null)
+            return const Center(child: Text('Entrada não encontrada.'));
+          final dateStr =
+              "${entry.createdAt.day.toString().padLeft(2, '0')}/${entry.createdAt.month.toString().padLeft(2, '0')}/${entry.createdAt.year}";
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -170,7 +187,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: entry.content));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto copiado!')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Texto copiado!')));
                       },
                     ),
                   ],
@@ -179,23 +197,23 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: _translatedContent != null
-                    ? Text(
-                        _translatedContent!,
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      )
-                    : TappableText(
-                        text: entry.content,
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        highlightColor: AppTheme.secondary,
-                      ),
+                        ? Text(
+                            _translatedContent!,
+                            style: GoogleFonts.nunito(
+                              fontSize: 16,
+                              height: 1.6,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          )
+                        : TappableText(
+                            text: entry.content,
+                            style: GoogleFonts.nunito(
+                              fontSize: 16,
+                              height: 1.6,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            highlightColor: AppTheme.secondary,
+                          ),
                   ),
                 )
               ] else ...[
@@ -215,33 +233,49 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                 style: GoogleFonts.nunito(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                 ),
                               ),
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.open_in_full_rounded, size: 16),
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    icon: const Icon(Icons.open_in_full_rounded,
+                                        size: 16),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 28, minHeight: 28),
                                     tooltip: 'Full view',
                                     onPressed: () => _showFullView(
                                       context,
                                       title: 'Original',
                                       text: _translatedContent ?? entry.content,
-                                      accentColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      accentColor: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.copy_rounded, size: 18),
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    icon: const Icon(Icons.copy_rounded,
+                                        size: 18),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 32, minHeight: 32),
                                     onPressed: () {
-                                      Clipboard.setData(ClipboardData(text: entry.content));
-                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto original copiado!')));
+                                      Clipboard.setData(
+                                          ClipboardData(text: entry.content));
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Texto original copiado!')));
                                     },
                                   ),
                                 ],
@@ -258,7 +292,9 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                       style: GoogleFonts.nunito(
                                         fontSize: 13,
                                         height: 1.6,
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                       ),
                                     )
                                   : TappableText(
@@ -266,7 +302,9 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                       style: GoogleFonts.nunito(
                                         fontSize: 13,
                                         height: 1.6,
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                       ),
                                       highlightColor: AppTheme.secondary,
                                     ),
@@ -296,27 +334,36 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.open_in_full_rounded, size: 16),
+                                    icon: const Icon(Icons.open_in_full_rounded,
+                                        size: 16),
                                     color: AppTheme.primary,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 28, minHeight: 28),
                                     tooltip: 'Full view',
                                     onPressed: () => _showFullView(
                                       context,
                                       title: 'AI Corrected',
-                                      text: _translatedCorrected ?? entry.correctedContent!,
+                                      text: _translatedCorrected ??
+                                          entry.correctedContent!,
                                       accentColor: AppTheme.primary,
                                       isPrimary: true,
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.copy_rounded, size: 18),
+                                    icon: const Icon(Icons.copy_rounded,
+                                        size: 18),
                                     color: AppTheme.primary,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 32, minHeight: 32),
                                     onPressed: () {
-                                      Clipboard.setData(ClipboardData(text: entry.correctedContent!));
-                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texto corrigido copiado!')));
+                                      Clipboard.setData(ClipboardData(
+                                          text: entry.correctedContent!));
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Texto corrigido copiado!')));
                                     },
                                   ),
                                 ],
@@ -327,7 +374,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                           Card(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(color: AppTheme.primary, width: 2),
+                              side: const BorderSide(
+                                  color: AppTheme.primary, width: 2),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
@@ -337,7 +385,9 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                       style: GoogleFonts.nunito(
                                         fontSize: 13,
                                         height: 1.6,
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                       ),
                                     )
                                   : TappableText(
@@ -345,7 +395,9 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                                       style: GoogleFonts.nunito(
                                         fontSize: 13,
                                         height: 1.6,
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                       ),
                                       highlightColor: AppTheme.primary,
                                     ),
@@ -361,7 +413,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    const Icon(Icons.comment_outlined, size: 20, color: AppTheme.secondary),
+                    const Icon(Icons.comment_outlined,
+                        size: 20, color: AppTheme.secondary),
                     const SizedBox(width: 8),
                     Text(
                       'AI Feedback & Comments',
@@ -378,7 +431,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                   color: AppTheme.secondary.withValues(alpha: 0.05),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppTheme.secondary.withValues(alpha: 0.2)),
+                    side: BorderSide(
+                        color: AppTheme.secondary.withValues(alpha: 0.2)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -397,8 +451,10 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
               const SizedBox(height: 32),
               OutlinedButton.icon(
                 onPressed: () => _confirmDelete(context, ref),
-                icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
-                label: const Text('Delete', style: TextStyle(color: AppTheme.error)),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: AppTheme.error),
+                label: const Text('Delete',
+                    style: TextStyle(color: AppTheme.error)),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppTheme.error),
                   minimumSize: const Size.fromHeight(48),
@@ -408,7 +464,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('Erro ao carregar a entrada.')),
+        error: (e, _) =>
+            const Center(child: Text('Erro ao carregar a entrada.')),
       ),
     );
   }
@@ -418,7 +475,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Entry'),
-        content: const Text('Tem certeza que deseja remover esta entrada do diário?'),
+        content: const Text(
+            'Tem certeza que deseja remover esta entrada do diário?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -428,7 +486,9 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(diaryListProvider.notifier).deleteEntry(widget.entryId);
+                await ref
+                    .read(diaryListProvider.notifier)
+                    .deleteEntry(widget.entryId);
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Entrada removida.')),
@@ -441,7 +501,8 @@ class _DiaryDetailScreenState extends ConsumerState<DiaryDetailScreen> {
                 );
               }
             },
-            child: const Text('Remover', style: TextStyle(color: AppTheme.error)),
+            child:
+                const Text('Remover', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),

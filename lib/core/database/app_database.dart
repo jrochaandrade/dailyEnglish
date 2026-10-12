@@ -19,7 +19,8 @@ class AppDatabase {
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
-    return openDatabase(path, version: 17, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path,
+        version: 18, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -101,9 +102,19 @@ class AppDatabase {
       )
     ''');
     final defaultCategories = [
-      'Work', 'Travel', 'Family', 'Daily Routine', 'Technology',
-      'IELTS', 'Verbs', 'Adjectives', 'Useful Phrases',
-      'Environmental Police', 'Immigration', 'Conversation', 'Study',
+      'Work',
+      'Travel',
+      'Family',
+      'Daily Routine',
+      'Technology',
+      'IELTS',
+      'Verbs',
+      'Adjectives',
+      'Useful Phrases',
+      'Environmental Police',
+      'Immigration',
+      'Conversation',
+      'Study',
     ];
     final now = DateTime.now().toIso8601String();
     for (final name in defaultCategories) {
@@ -148,8 +159,13 @@ class AppDatabase {
       )
     ''');
     await db.insert('player_stats', {
-      'id': 1, 'xp': 0, 'level': 1, 'streak': 0, 'shields': 0,
-      'streak_at_risk': 0, 'games_played_today': '',
+      'id': 1,
+      'xp': 0,
+      'level': 1,
+      'streak': 0,
+      'shields': 0,
+      'streak_at_risk': 0,
+      'games_played_today': '',
     });
 
     await db.execute('''
@@ -190,7 +206,8 @@ class AppDatabase {
         next_review_at INTEGER,
         ease_factor REAL DEFAULT 2.5,
         repetitions INTEGER DEFAULT 0,
-        review_interval INTEGER DEFAULT 0
+        review_interval INTEGER DEFAULT 0,
+        last_review_at TEXT
       )
     ''');
   }
@@ -201,10 +218,21 @@ class AppDatabase {
       await db.execute('ALTER TABLE words ADD COLUMN translation_3 TEXT');
     }
     if (oldVersion < 4) {
-      try { await db.execute('ALTER TABLE words ADD COLUMN meaning_pt TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN example_translation_1 TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN example_translation_2 TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN example_translation_3 TEXT'); } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN meaning_pt TEXT');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE words ADD COLUMN example_translation_1 TEXT');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE words ADD COLUMN example_translation_2 TEXT');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE words ADD COLUMN example_translation_3 TEXT');
+      } catch (_) {}
     }
     if (oldVersion < 5) {
       await db.execute('''
@@ -219,13 +247,27 @@ class AppDatabase {
       ''');
     }
     if (oldVersion < 6) {
-      try { await db.execute('ALTER TABLE diary_entries ADD COLUMN corrected_content TEXT'); } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE diary_entries ADD COLUMN corrected_content TEXT');
+      } catch (_) {}
     }
     if (oldVersion < 8) {
-      try { await db.execute('ALTER TABLE words ADD COLUMN next_review_at INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN ease_factor REAL DEFAULT 2.5'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN sr_repetitions INTEGER DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN sr_interval INTEGER DEFAULT 0'); } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN next_review_at INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE words ADD COLUMN ease_factor REAL DEFAULT 2.5');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE words ADD COLUMN sr_repetitions INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE words ADD COLUMN sr_interval INTEGER DEFAULT 0');
+      } catch (_) {}
     }
     if (oldVersion < 10) {
       await db.execute('''
@@ -257,9 +299,19 @@ class AppDatabase {
         )
       ''');
       final defaultCategories = [
-        'Work', 'Travel', 'Family', 'Daily Routine', 'Technology',
-        'IELTS', 'Verbs', 'Adjectives', 'Useful Phrases',
-        'Environmental Police', 'Immigration', 'Conversation', 'Study',
+        'Work',
+        'Travel',
+        'Family',
+        'Daily Routine',
+        'Technology',
+        'IELTS',
+        'Verbs',
+        'Adjectives',
+        'Useful Phrases',
+        'Environmental Police',
+        'Immigration',
+        'Conversation',
+        'Study',
       ];
       final now = DateTime.now().toIso8601String();
       for (final name in defaultCategories) {
@@ -291,14 +343,38 @@ class AppDatabase {
       ''');
     }
     if (oldVersion < 11) {
-      try { await db.execute('ALTER TABLE phrasal_verbs ADD COLUMN next_review_at INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrasal_verbs ADD COLUMN ease_factor REAL DEFAULT 2.5'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrasal_verbs ADD COLUMN sr_repetitions INTEGER DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrasal_verbs ADD COLUMN sr_interval INTEGER DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrases ADD COLUMN next_review_at INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrases ADD COLUMN ease_factor REAL DEFAULT 2.5'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrases ADD COLUMN sr_repetitions INTEGER DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE phrases ADD COLUMN sr_interval INTEGER DEFAULT 0'); } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrasal_verbs ADD COLUMN next_review_at INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrasal_verbs ADD COLUMN ease_factor REAL DEFAULT 2.5');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrasal_verbs ADD COLUMN sr_repetitions INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrasal_verbs ADD COLUMN sr_interval INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE phrases ADD COLUMN next_review_at INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrases ADD COLUMN ease_factor REAL DEFAULT 2.5');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrases ADD COLUMN sr_repetitions INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE phrases ADD COLUMN sr_interval INTEGER DEFAULT 0');
+      } catch (_) {}
     }
     if (oldVersion < 12) {
       await db.execute('''
@@ -315,13 +391,20 @@ class AppDatabase {
       ''');
       try {
         await db.insert('player_stats', {
-          'id': 1, 'xp': 0, 'level': 1, 'streak': 0, 'shields': 0,
-          'streak_at_risk': 0, 'games_played_today': '',
+          'id': 1,
+          'xp': 0,
+          'level': 1,
+          'streak': 0,
+          'shields': 0,
+          'streak_at_risk': 0,
+          'games_played_today': '',
         });
       } catch (_) {}
     }
     if (oldVersion < 13) {
-      try { await db.execute('ALTER TABLE diary_entries ADD COLUMN comments TEXT'); } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE diary_entries ADD COLUMN comments TEXT');
+      } catch (_) {}
     }
     if (oldVersion < 14) {
       await db.execute('''
@@ -350,11 +433,21 @@ class AppDatabase {
       ''');
     }
     if (oldVersion < 16) {
-      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_1 TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_2 TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_3 TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_4 TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE words ADD COLUMN synonym_5 TEXT'); } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN synonym_1 TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN synonym_2 TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN synonym_3 TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN synonym_4 TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE words ADD COLUMN synonym_5 TEXT');
+      } catch (_) {}
       // Migrate any existing single-string synonyms value into synonym_1
       try {
         await db.execute(
@@ -377,9 +470,16 @@ class AppDatabase {
           next_review_at INTEGER,
           ease_factor REAL DEFAULT 2.5,
           repetitions INTEGER DEFAULT 0,
-          review_interval INTEGER DEFAULT 0
+          review_interval INTEGER DEFAULT 0,
+          last_review_at TEXT
         )
       ''');
+    }
+    if (oldVersion < 18) {
+      try {
+        await db.execute(
+            'ALTER TABLE contest_cards ADD COLUMN last_review_at TEXT');
+      } catch (_) {}
     }
   }
 }

@@ -26,7 +26,8 @@ class GlobalSearchResults {
   );
 }
 
-final globalSearchProvider = FutureProvider.autoDispose.family<GlobalSearchResults, String>((ref, query) async {
+final globalSearchProvider = FutureProvider.autoDispose
+    .family<GlobalSearchResults, String>((ref, query) async {
   if (query.trim().isEmpty) return GlobalSearchResults.empty;
 
   final wordRepo = ref.read(wordRepositoryProvider);

@@ -12,18 +12,24 @@ class ResultCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = total == 0 ? 0.0 : score / total;
     return SizedBox(
-      width: 110, height: 110,
+      width: 110,
+      height: 110,
       child: Stack(alignment: Alignment.center, children: [
         SizedBox(
-          width: 110, height: 110,
+          width: 110,
+          height: 110,
           child: CircularProgressIndicator(
-            value: pct, strokeWidth: 10,
+            value: pct,
+            strokeWidth: 10,
             color: AppTheme.primary,
             backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
           ),
         ),
         Text('$score/$total',
-            style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+            style: GoogleFonts.nunito(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primary)),
       ]),
     );
   }
@@ -39,10 +45,13 @@ class XpBar extends StatelessWidget {
     return Column(children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text('Level ${stats.level}',
-            style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700,
+            style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
         Text('${stats.xp} XP total',
-            style: GoogleFonts.nunito(fontSize: 13,
+            style: GoogleFonts.nunito(
+                fontSize: 13,
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ]),
       const SizedBox(height: 4),
@@ -73,12 +82,16 @@ class StreakRow extends StatelessWidget {
         const Text('🛡', style: TextStyle(fontSize: 20)),
         const SizedBox(width: 4),
         Text('×${stats.shields}',
-            style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700)),
+            style:
+                GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700)),
       ],
       if (stats.streakAtRisk) ...[
         const SizedBox(width: 8),
         Text('at risk!',
-            style: GoogleFonts.nunito(fontSize: 13, color: AppTheme.error, fontWeight: FontWeight.w700)),
+            style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: AppTheme.error,
+                fontWeight: FontWeight.w700)),
       ],
     ]);
   }

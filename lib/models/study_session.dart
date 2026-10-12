@@ -6,8 +6,7 @@ enum StudyType {
 
   String get label => name[0].toUpperCase() + name.substring(1);
 
-  static StudyType fromString(String value) =>
-      StudyType.values.firstWhere(
+  static StudyType fromString(String value) => StudyType.values.firstWhere(
         (e) => e.name == value,
         orElse: () => throw ArgumentError('Unknown StudyType: "$value"'),
       );

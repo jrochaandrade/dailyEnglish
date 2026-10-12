@@ -18,6 +18,7 @@ class _ScrambleRound {
 }
 
 enum _ScramblePhase { loading, playing, results }
+
 enum _CheckState { unchecked, correct, wrong }
 
 class SentenceScrambleScreen extends ConsumerStatefulWidget {
@@ -25,10 +26,12 @@ class SentenceScrambleScreen extends ConsumerStatefulWidget {
   const SentenceScrambleScreen({super.key, required this.source});
 
   @override
-  ConsumerState<SentenceScrambleScreen> createState() => _SentenceScrambleScreenState();
+  ConsumerState<SentenceScrambleScreen> createState() =>
+      _SentenceScrambleScreenState();
 }
 
-class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen> {
+class _SentenceScrambleScreenState
+    extends ConsumerState<SentenceScrambleScreen> {
   _ScramblePhase _phase = _ScramblePhase.loading;
   List<_ScrambleRound> _rounds = [];
   int _current = 0;
@@ -50,12 +53,15 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
     final allItems = await loadGameItems(widget.source, ref);
     if (!mounted) return;
 
-    final qualifying = allItems.where((item) =>
-        item.examples.any((ex) => ex.trim().split(RegExp(r'\s+')).length >= 3)).toList();
+    final qualifying = allItems
+        .where((item) => item.examples
+            .any((ex) => ex.trim().split(RegExp(r'\s+')).length >= 3))
+        .toList();
 
     if (qualifying.isEmpty) {
       setState(() {
-        _errorMessage = 'No ${gameSourceLabel(widget.source)} with example sentences found. Add examples first.';
+        _errorMessage =
+            'No ${gameSourceLabel(widget.source)} with example sentences found. Add examples first.';
         _phase = _ScramblePhase.playing;
       });
       return;
@@ -70,15 +76,20 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
       final validExamples = item.examples
           .where((ex) => ex.trim().split(RegExp(r'\s+')).length >= 3)
           .toList();
-      if (validExamples.isEmpty) { continue; }
+      if (validExamples.isEmpty) {
+        continue;
+      }
       final sentence = validExamples[rng.nextInt(validExamples.length)];
       final tokens = sentence.trim().split(' ');
       final shuffled = [...tokens]..shuffle(rng);
       final uniqueTokens = tokens.toSet();
-      while (_joinNorm(shuffled) == _joinNorm(tokens) && tokens.length > 1 && uniqueTokens.length > 1) {
+      while (_joinNorm(shuffled) == _joinNorm(tokens) &&
+          tokens.length > 1 &&
+          uniqueTokens.length > 1) {
         shuffled.shuffle(rng);
       }
-      selected.add(_ScrambleRound(original: sentence.trim(), shuffled: shuffled));
+      selected
+          .add(_ScrambleRound(original: sentence.trim(), shuffled: shuffled));
     }
 
     if (!mounted) return;
@@ -95,10 +106,13 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
     _checkState = _CheckState.unchecked;
   }
 
-  String _joinNorm(List<String> tokens) => tokens.join(' ').toLowerCase().trim();
+  String _joinNorm(List<String> tokens) =>
+      tokens.join(' ').toLowerCase().trim();
 
   void _placeToken(int bankIdx) {
-    if (_checkState != _CheckState.unchecked) { return; }
+    if (_checkState != _CheckState.unchecked) {
+      return;
+    }
     setState(() {
       _placed.add(_bank[bankIdx]);
       _bank.removeAt(bankIdx);
@@ -106,7 +120,9 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
   }
 
   void _returnToken(int placedIdx) {
-    if (_checkState != _CheckState.unchecked) { return; }
+    if (_checkState != _CheckState.unchecked) {
+      return;
+    }
     setState(() {
       _bank.add(_placed[placedIdx]);
       _placed.removeAt(placedIdx);
@@ -115,21 +131,31 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
 
   void _check() {
     final answer = _placed.join(' ');
-    final correct = answer.toLowerCase().trim() == _rounds[_current].original.toLowerCase().trim();
+    final correct = answer.toLowerCase().trim() ==
+        _rounds[_current].original.toLowerCase().trim();
     setState(() {
       _checkState = correct ? _CheckState.correct : _CheckState.wrong;
-      if (correct) { _score++; }
+      if (correct) {
+        _score++;
+      }
     });
   }
 
   Future<void> _next() async {
     if (_current + 1 >= _rounds.length) {
       setState(() => _phase = _ScramblePhase.loading);
-      await ref.read(playerStatsProvider.notifier).recordSession('scramble', _score * 10);
-      if (!mounted) { return; }
+      await ref
+          .read(playerStatsProvider.notifier)
+          .recordSession('scramble', _score * 10);
+      if (!mounted) {
+        return;
+      }
       setState(() => _phase = _ScramblePhase.results);
     } else {
-      setState(() { _current++; _initRound(); });
+      setState(() {
+        _current++;
+        _initRound();
+      });
     }
   }
 
@@ -137,14 +163,22 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
   Widget build(BuildContext context) {
     if (_errorMessage != null) {
       return Scaffold(
-        appBar: AppBar(leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/games'))),
-        body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_errorMessage!, textAlign: TextAlign.center))),
+        appBar: AppBar(
+            leading: BackButton(
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/games'))),
+        body: Center(
+            child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_errorMessage!, textAlign: TextAlign.center))),
       );
     }
     if (_phase == _ScramblePhase.loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    if (_phase == _ScramblePhase.results) { return _buildResults(context); }
+    if (_phase == _ScramblePhase.results) {
+      return _buildResults(context);
+    }
     return _buildPlaying(context);
   }
 
@@ -152,8 +186,12 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
     final round = _rounds[_current];
     final allPlaced = _bank.isEmpty;
     Color feedbackColor = Theme.of(context).colorScheme.outlineVariant;
-    if (_checkState == _CheckState.correct) { feedbackColor = AppTheme.primary; }
-    if (_checkState == _CheckState.wrong) { feedbackColor = AppTheme.error; }
+    if (_checkState == _CheckState.correct) {
+      feedbackColor = AppTheme.primary;
+    }
+    if (_checkState == _CheckState.wrong) {
+      feedbackColor = AppTheme.error;
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -164,17 +202,24 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
             children: [
               Row(children: [
                 Text('${_current + 1} / ${_rounds.length}',
-                    style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w600,
+                    style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const Spacer(),
                 Text('Score: $_score',
-                    style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.secondary)),
+                    style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.secondary)),
               ]),
               const SizedBox(height: 6),
               LinearProgressIndicator(
-                value: (_current + 1) / _rounds.length, color: AppTheme.secondary,
+                value: (_current + 1) / _rounds.length,
+                color: AppTheme.secondary,
                 backgroundColor: AppTheme.secondary.withValues(alpha: 0.15),
-                minHeight: 6, borderRadius: BorderRadius.circular(4),
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(4),
               ),
               const SizedBox(height: 20),
               Container(
@@ -190,51 +235,82 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
                 ),
                 padding: const EdgeInsets.all(12),
                 child: _placed.isEmpty
-                    ? Center(child: Text('Tap words below to build the sentence',
-                        style: GoogleFonts.nunito(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)))
+                    ? Center(
+                        child: Text('Tap words below to build the sentence',
+                            style: GoogleFonts.nunito(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant)))
                     : Wrap(
-                        spacing: 6, runSpacing: 6,
-                        children: _placed.asMap().entries.map((e) => GestureDetector(
-                          onTap: () => _returnToken(e.key),
-                          child: _WordChip(label: e.value, color: AppTheme.secondary),
-                        )).toList(),
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _placed
+                            .asMap()
+                            .entries
+                            .map((e) => GestureDetector(
+                                  onTap: () => _returnToken(e.key),
+                                  child: _WordChip(
+                                      label: e.value,
+                                      color: AppTheme.secondary),
+                                ))
+                            .toList(),
                       ),
               ),
               if (_checkState == _CheckState.wrong) ...[
                 const SizedBox(height: 8),
                 Text('Correct: ${round.original}',
-                    style: GoogleFonts.nunito(fontSize: 13, color: AppTheme.error, fontStyle: FontStyle.italic)),
+                    style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        color: AppTheme.error,
+                        fontStyle: FontStyle.italic)),
               ],
               const SizedBox(height: 20),
               Wrap(
-                spacing: 8, runSpacing: 8,
-                children: _bank.asMap().entries.map((e) => GestureDetector(
-                  onTap: () => _placeToken(e.key),
-                  child: _WordChip(label: e.value, color: Theme.of(context).colorScheme.outline),
-                )).toList(),
+                spacing: 8,
+                runSpacing: 8,
+                children: _bank
+                    .asMap()
+                    .entries
+                    .map((e) => GestureDetector(
+                          onTap: () => _placeToken(e.key),
+                          child: _WordChip(
+                              label: e.value,
+                              color: Theme.of(context).colorScheme.outline),
+                        ))
+                    .toList(),
               ),
               const Spacer(),
               if (_checkState == _CheckState.unchecked)
                 ElevatedButton(
                   onPressed: allPlaced ? _check : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.secondary, foregroundColor: Colors.white,
+                    backgroundColor: AppTheme.secondary,
+                    foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text('Check', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text('Check',
+                      style: GoogleFonts.nunito(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                 )
               else
                 ElevatedButton(
                   onPressed: () => _next(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _checkState == _CheckState.correct ? AppTheme.primary : AppTheme.secondary,
+                    backgroundColor: _checkState == _CheckState.correct
+                        ? AppTheme.primary
+                        : AppTheme.secondary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text(_current + 1 >= _rounds.length ? 'See Results' : 'Next',
-                      style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text(
+                      _current + 1 >= _rounds.length ? 'See Results' : 'Next',
+                      style: GoogleFonts.nunito(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
             ],
           ),
@@ -253,52 +329,85 @@ class _SentenceScrambleScreenState extends ConsumerState<SentenceScrambleScreen>
           child: Column(children: [
             const Text('🔀', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 8),
-            Text('Sentence Scramble', style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w900,
-                color: Theme.of(context).colorScheme.onSurface)),
+            Text('Sentence Scramble',
+                style: GoogleFonts.nunito(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Theme.of(context).colorScheme.onSurface)),
             const SizedBox(height: 4),
             Text(gameSourceLabel(widget.source),
-                style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 24),
             ResultCircle(score: _score, total: _rounds.length),
             const SizedBox(height: 16),
-            Text('+$xp XP', style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.secondary)),
-            if (stats != null) ...[const SizedBox(height: 8), XpBar(stats: stats), const SizedBox(height: 8), StreakRow(stats: stats)],
+            Text('+$xp XP',
+                style: GoogleFonts.nunito(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.secondary)),
+            if (stats != null) ...[
+              const SizedBox(height: 8),
+              XpBar(stats: stats),
+              const SizedBox(height: 8),
+              StreakRow(stats: stats)
+            ],
             const SizedBox(height: 32),
-            SizedBox(width: double.infinity,
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
                   setState(() {
-                    _current = 0; _score = 0; _errorMessage = null;
-                    _rounds = []; _bank = []; _placed = [];
+                    _current = 0;
+                    _score = 0;
+                    _errorMessage = null;
+                    _rounds = [];
+                    _bank = [];
+                    _placed = [];
                     _checkState = _CheckState.unchecked;
                     _phase = _ScramblePhase.loading;
                   });
                   _load();
                 },
                 icon: const Icon(Icons.replay_rounded),
-                label: Text('Play Again', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary, foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                label: Text('Play Again',
+                    style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.secondary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(width: double.infinity,
+            SizedBox(
+              width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.canPop() ? context.pop() : context.go('/games'),
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/games'),
                 icon: const Icon(Icons.grid_view_rounded),
-                label: Text('Change Game', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                label: Text('Change Game',
+                    style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(width: double.infinity,
+            SizedBox(
+              width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () => context.go('/'),
                 icon: const Icon(Icons.home_rounded),
-                label: Text('Home', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                label: Text('Home',
+                    style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
               ),
             ),
           ]),
@@ -322,8 +431,11 @@ class _WordChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
-      child: Text(label, style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurface)),
+      child: Text(label,
+          style: GoogleFonts.nunito(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurface)),
     );
   }
 }

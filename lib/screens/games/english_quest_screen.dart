@@ -39,11 +39,11 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
   _QuestPhase _phase = _QuestPhase.loading;
   List<_QuestRound> _rounds = [];
   int _currentIndex = 0;
-  
+
   int _playerLives = 3;
   int _enemyLives = 5;
   int _xpEarned = 0;
-  
+
   int? _selectedIndex;
   bool _answered = false;
   String? _errorMessage;
@@ -61,7 +61,8 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
       final words = await loadGameItems(GameSource.words, ref);
       if (words.length < 4) {
         setState(() {
-          _errorMessage = 'Not enough words to start a Battle. Add at least 4 words.';
+          _errorMessage =
+              'Not enough words to start a Battle. Add at least 4 words.';
           _phase = _QuestPhase.playing;
         });
         return;
@@ -74,18 +75,23 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
       // We need at least enough rounds to win or lose. Let's make 20 just in case.
       for (int i = 0; i < 20; i++) {
         final item = selectedWords[i % selectedWords.length];
-        
+
         // Randomly choose challenge type
         final type = rng.nextInt(2); // 0: Translation, 1: Fill in blank
 
         if (type == 1 && item.examples.isNotEmpty) {
           final sentence = item.examples[0];
-          final pattern = RegExp(r'\b' + RegExp.escape(item.term) + r'\b', caseSensitive: false);
-          final gapped = pattern.hasMatch(sentence) ? sentence.replaceFirst(pattern, '____') : sentence;
-          
-          final distractors = words.where((w) => w.id != item.id).toList()..shuffle(rng);
-          final options = [item.term, ...distractors.take(3).map((w) => w.term)]..shuffle(rng);
-          
+          final pattern = RegExp(r'\b' + RegExp.escape(item.term) + r'\b',
+              caseSensitive: false);
+          final gapped = pattern.hasMatch(sentence)
+              ? sentence.replaceFirst(pattern, '____')
+              : sentence;
+
+          final distractors = words.where((w) => w.id != item.id).toList()
+            ..shuffle(rng);
+          final options = [item.term, ...distractors.take(3).map((w) => w.term)]
+            ..shuffle(rng);
+
           rounds.add(_QuestRound(
             question: gapped,
             description: 'Complete the sentence:',
@@ -94,9 +100,13 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
             item: item,
           ));
         } else {
-          final distractors = words.where((w) => w.id != item.id).toList()..shuffle(rng);
-          final options = [item.translation, ...distractors.take(3).map((w) => w.translation)]..shuffle(rng);
-          
+          final distractors = words.where((w) => w.id != item.id).toList()
+            ..shuffle(rng);
+          final options = [
+            item.translation,
+            ...distractors.take(3).map((w) => w.translation)
+          ]..shuffle(rng);
+
           rounds.add(_QuestRound(
             question: item.term,
             description: 'What does this mean?',
@@ -122,7 +132,7 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
 
   void _onAnswer(int index) {
     if (_answered) return;
-    
+
     final correct = index == _rounds[_currentIndex].correctIndex;
     setState(() {
       _selectedIndex = index;
@@ -161,7 +171,9 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
       // Bonus XP for winning
       _xpEarned += 50;
     }
-    await ref.read(playerStatsProvider.notifier).recordSession('quest_battle', _xpEarned);
+    await ref
+        .read(playerStatsProvider.notifier)
+        .recordSession('quest_battle', _xpEarned);
     if (!mounted) return;
     setState(() => _phase = _QuestPhase.results);
   }
@@ -172,11 +184,14 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_phase == _QuestPhase.results) return _buildResults();
-    
+
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Word Battle')),
-        body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_errorMessage!))),
+        body: Center(
+            child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_errorMessage!))),
       );
     }
 
@@ -208,10 +223,11 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                   onPressed: () => context.pop(),
                 ),
               ),
-              
+
               // BATTLE ARENA STATUS
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -220,30 +236,44 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                       children: [
                         const Text('🧑‍🎓', style: TextStyle(fontSize: 48)),
                         const SizedBox(height: 4),
-                        Text('You', style: GoogleFonts.nunito(fontWeight: FontWeight.w800, fontSize: 16)),
+                        Text('You',
+                            style: GoogleFonts.nunito(
+                                fontWeight: FontWeight.w800, fontSize: 16)),
                         const SizedBox(height: 4),
                         Row(
-                          children: List.generate(3, (i) => Icon(
-                            i < _playerLives ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            color: Colors.redAccent,
-                            size: 20,
-                          )),
+                          children: List.generate(
+                              3,
+                              (i) => Icon(
+                                    i < _playerLives
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  )),
                         ),
                       ],
                     ),
-                    
+
                     // VS
                     Column(
                       children: [
-                        Text('VS', style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.warning)),
+                        Text('VS',
+                            style: GoogleFonts.nunito(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.warning)),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppTheme.warning.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text('XP: $_xpEarned', style: GoogleFonts.nunito(fontWeight: FontWeight.w800, color: AppTheme.warning)),
+                          child: Text('XP: $_xpEarned',
+                              style: GoogleFonts.nunito(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.warning)),
                         ),
                       ],
                     ),
@@ -253,14 +283,20 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                       children: [
                         const Text('👾', style: TextStyle(fontSize: 48)),
                         const SizedBox(height: 4),
-                        Text('Monster', style: GoogleFonts.nunito(fontWeight: FontWeight.w800, fontSize: 16)),
+                        Text('Monster',
+                            style: GoogleFonts.nunito(
+                                fontWeight: FontWeight.w800, fontSize: 16)),
                         const SizedBox(height: 4),
                         Row(
-                          children: List.generate(5, (i) => Icon(
-                            i < _enemyLives ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            color: Colors.purpleAccent,
-                            size: 20,
-                          )),
+                          children: List.generate(
+                              5,
+                              (i) => Icon(
+                                    i < _enemyLives
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    color: Colors.purpleAccent,
+                                    size: 20,
+                                  )),
                         ),
                       ],
                     ),
@@ -269,7 +305,7 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
               ),
 
               const SizedBox(height: 16),
-              
+
               // BATTLE MESSAGE
               AnimatedOpacity(
                 opacity: _answered ? 1.0 : 0.0,
@@ -278,12 +314,14 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 24),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _selectedIndex == round.correctIndex 
+                    color: _selectedIndex == round.correctIndex
                         ? Colors.green.withValues(alpha: 0.15)
                         : Colors.red.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _selectedIndex == round.correctIndex ? Colors.green : Colors.red,
+                      color: _selectedIndex == round.correctIndex
+                          ? Colors.green
+                          : Colors.red,
                     ),
                   ),
                   child: Text(
@@ -292,7 +330,9 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                     style: GoogleFonts.nunito(
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
-                      color: _selectedIndex == round.correctIndex ? Colors.green : Colors.red,
+                      color: _selectedIndex == round.correctIndex
+                          ? Colors.green
+                          : Colors.red,
                     ),
                   ),
                 ),
@@ -300,7 +340,8 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
 
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
                     children: [
                       Text(
@@ -314,16 +355,19 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                       const SizedBox(height: 12),
                       Card(
                         elevation: 4,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 32),
                           child: Column(
                             children: [
                               Text(
                                 round.question,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.nunito(
-                                  fontSize: round.question.length > 30 ? 20 : 28,
+                                  fontSize:
+                                      round.question.length > 30 ? 20 : 28,
                                   fontWeight: FontWeight.w900,
                                   height: 1.4,
                                 ),
@@ -331,23 +375,26 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                               if (round.audioText != null) ...[
                                 const SizedBox(height: 16),
                                 IconButton(
-                                  icon: const Icon(Icons.volume_up_rounded, size: 32),
+                                  icon: const Icon(Icons.volume_up_rounded,
+                                      size: 32),
                                   color: AppTheme.primary,
-                                  onPressed: () => ref.read(audioServiceProvider).speak(round.audioText!),
+                                  onPressed: () => ref
+                                      .read(audioServiceProvider)
+                                      .speak(round.audioText!),
                                 ),
                               ],
                             ],
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // Options
                       ...List.generate(round.options.length, (i) {
                         final isCorrect = i == round.correctIndex;
                         final isSelected = i == _selectedIndex;
-                        
+
                         Color? borderColor;
                         Color? bgColor;
                         if (_answered) {
@@ -367,21 +414,30 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                             borderRadius: BorderRadius.circular(16),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 18, horizontal: 20),
                               decoration: BoxDecoration(
-                                color: bgColor ?? Theme.of(context).cardTheme.color,
+                                color: bgColor ??
+                                    Theme.of(context).cardTheme.color,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: borderColor ?? Colors.grey.withValues(alpha: 0.2),
-                                  width: (isSelected || (_answered && isCorrect)) ? 2.5 : 1,
+                                  color: borderColor ??
+                                      Colors.grey.withValues(alpha: 0.2),
+                                  width:
+                                      (isSelected || (_answered && isCorrect))
+                                          ? 2.5
+                                          : 1,
                                 ),
-                                boxShadow: isSelected ? [] : [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.05),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
+                                boxShadow: isSelected
+                                    ? []
+                                    : [
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                               ),
                               child: Row(
                                 children: [
@@ -395,16 +451,18 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                                     ),
                                   ),
                                   if (_answered && isCorrect)
-                                    const Icon(Icons.check_circle_rounded, color: AppTheme.primary),
+                                    const Icon(Icons.check_circle_rounded,
+                                        color: AppTheme.primary),
                                   if (_answered && isSelected && !isCorrect)
-                                    const Icon(Icons.cancel_rounded, color: AppTheme.error),
+                                    const Icon(Icons.cancel_rounded,
+                                        color: AppTheme.error),
                                 ],
                               ),
                             ),
                           ),
                         );
                       }),
-                      
+
                       if (_answered && _playerLives > 0 && _enemyLives > 0) ...[
                         const SizedBox(height: 16),
                         if (round.item.translation.isNotEmpty)
@@ -416,9 +474,17 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                             ),
                             child: Column(
                               children: [
-                                Text('Learning Note:', style: GoogleFonts.nunito(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                Text('Learning Note:',
+                                    style: GoogleFonts.nunito(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 4),
-                                Text('${round.item.term} = ${round.item.translation}', style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.bold)),
+                                Text(
+                                    '${round.item.term} = ${round.item.translation}',
+                                    style: GoogleFonts.nunito(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),
@@ -429,12 +495,14 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                             backgroundColor: AppTheme.primary,
                             foregroundColor: Colors.white,
                             minimumSize: const Size.fromHeight(56),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
                             elevation: 4,
                           ),
                           child: Text(
                             'NEXT ROUND',
-                            style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w900),
+                            style: GoogleFonts.nunito(
+                                fontSize: 18, fontWeight: FontWeight.w900),
                           ),
                         ),
                       ],
@@ -471,7 +539,9 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
               ),
               const SizedBox(height: 24),
               Icon(
-                success ? Icons.emoji_events_rounded : Icons.sentiment_very_dissatisfied_rounded,
+                success
+                    ? Icons.emoji_events_rounded
+                    : Icons.sentiment_very_dissatisfied_rounded,
                 size: 100,
                 color: success ? AppTheme.warning : AppTheme.error,
               ),
@@ -481,15 +551,19 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      _resultRow('Total XP', '+$_xpEarned XP', color: AppTheme.primary),
+                      _resultRow('Total XP', '+$_xpEarned XP',
+                          color: AppTheme.primary),
                       if (success) ...[
-                         const Divider(height: 32),
-                        _resultRow('Victory Bonus', '+50 XP', color: AppTheme.warning),
+                        const Divider(height: 32),
+                        _resultRow('Victory Bonus', '+50 XP',
+                            color: AppTheme.warning),
                       ],
                       const Divider(height: 32),
-                      _resultRow('Player Health', '$_playerLives / 3', color: Colors.redAccent),
+                      _resultRow('Player Health', '$_playerLives / 3',
+                          color: Colors.redAccent),
                       const Divider(height: 32),
-                      _resultRow('Monster Health', '$_enemyLives / 5', color: Colors.purpleAccent),
+                      _resultRow('Monster Health', '$_enemyLives / 5',
+                          color: Colors.purpleAccent),
                     ],
                   ),
                 ),
@@ -501,9 +575,11 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                   minimumSize: const Size.fromHeight(56),
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text('BACK TO HOME', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('BACK TO HOME',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -522,9 +598,11 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
                 },
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text('BATTLE AGAIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('BATTLE AGAIN',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -537,8 +615,12 @@ class _EnglishQuestScreenState extends ConsumerState<EnglishQuestScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.grey)),
-        Text(value, style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+        Text(label,
+            style: GoogleFonts.nunito(
+                fontSize: 16, fontWeight: FontWeight.w700, color: Colors.grey)),
+        Text(value,
+            style: GoogleFonts.nunito(
+                fontSize: 18, fontWeight: FontWeight.w900, color: color)),
       ],
     );
   }

@@ -47,7 +47,8 @@ class PhraseRepository {
 
   Future<void> update(Phrase phrase) async {
     final db = await _futureDb;
-    await db.update('phrases', phrase.toMap(), where: 'id = ?', whereArgs: [phrase.id]);
+    await db.update('phrases', phrase.toMap(),
+        where: 'id = ?', whereArgs: [phrase.id]);
   }
 
   Future<void> delete(int id) async {

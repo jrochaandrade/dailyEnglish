@@ -14,7 +14,8 @@ class DiaryRepository {
 
   Future<DiaryEntry?> getById(int id) async {
     final db = await _futureDb;
-    final maps = await db.query('diary_entries', where: 'id = ?', whereArgs: [id]);
+    final maps =
+        await db.query('diary_entries', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) return null;
     return DiaryEntry.fromMap(maps.first);
   }
@@ -26,7 +27,8 @@ class DiaryRepository {
 
   Future<void> update(DiaryEntry entry) async {
     final db = await _futureDb;
-    await db.update('diary_entries', entry.toMap(), where: 'id = ?', whereArgs: [entry.id]);
+    await db.update('diary_entries', entry.toMap(),
+        where: 'id = ?', whereArgs: [entry.id]);
   }
 
   Future<void> delete(int id) async {

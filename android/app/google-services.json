@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "687585142168-2q4aqm8f8hlkmohbo8ppfvufa2o050v0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.devrocha.daily_english",
+            "certificate_hash": "44b6261f75118de28a3a99340109ce8a9a669dae"
+          }
+        },
+        {
           "client_id": "687585142168-a3ojd0icc7f7i58tgi6v056gtkqqsjin.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

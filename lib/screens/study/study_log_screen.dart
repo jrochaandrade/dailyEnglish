@@ -185,8 +185,8 @@ class _StatsHeader extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -377,8 +377,7 @@ class _MockTestTile extends ConsumerWidget {
                 value: null,
                 child: ListTile(
                   leading: Icon(Icons.delete_rounded, color: Colors.red),
-                  title:
-                      Text('Delete', style: TextStyle(color: Colors.red)),
+                  title: Text('Delete', style: TextStyle(color: Colors.red)),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -403,9 +402,7 @@ class _MockTestTile extends ConsumerWidget {
                 ),
               );
               if (confirmed == true && context.mounted) {
-                await ref
-                    .read(mockTestListProvider.notifier)
-                    .deleteTest(id);
+                await ref.read(mockTestListProvider.notifier).deleteTest(id);
               }
             },
           ),
@@ -463,8 +460,8 @@ class _SkillGroup extends StatelessWidget {
       for (final dayNum in days) ...[
         _DayDivider(
             dayNum: dayNum,
-            minutes: byDay[dayNum]!
-                .fold(0, (sum, s) => sum + s.durationMinutes)),
+            minutes:
+                byDay[dayNum]!.fold(0, (sum, s) => sum + s.durationMinutes)),
         ...byDay[dayNum]!
             .map((s) => _SessionTile(key: ValueKey(s.id), session: s)),
       ],
@@ -489,8 +486,9 @@ class _SkillGroup extends StatelessWidget {
         ),
       ];
     } else if (first == null) {
-      children =
-          sessions.map((s) => _SessionTile(key: ValueKey(s.id), session: s)).toList();
+      children = sessions
+          .map((s) => _SessionTile(key: ValueKey(s.id), session: s))
+          .toList();
     } else {
       final byWeekDay = _groupByWeekAndDay(first);
       final weeks = byWeekDay.keys.toList()..sort((a, b) => b.compareTo(a));
@@ -498,7 +496,8 @@ class _SkillGroup extends StatelessWidget {
         for (final weekNum in weeks) ...[
           _WeekDivider(
               weekNum: weekNum,
-              minutes: byWeekDay[weekNum]!.values
+              minutes: byWeekDay[weekNum]!
+                  .values
                   .expand((l) => l)
                   .fold(0, (sum, s) => sum + s.durationMinutes)),
           ..._dayChildren(byWeekDay[weekNum]!),
@@ -688,8 +687,7 @@ class _SessionTile extends ConsumerWidget {
             value: _SessionAction.delete,
             child: ListTile(
                 leading: Icon(Icons.delete_rounded, color: Colors.red),
-                title:
-                    Text('Delete', style: TextStyle(color: Colors.red)),
+                title: Text('Delete', style: TextStyle(color: Colors.red)),
                 contentPadding: EdgeInsets.zero),
           ),
         ],

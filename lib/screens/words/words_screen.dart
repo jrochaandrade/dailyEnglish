@@ -7,11 +7,17 @@ import '../../providers/category_provider.dart';
 import '../../models/word.dart';
 import '../../core/theme/app_theme.dart';
 
-Color _wordStatusColor(String s) =>
-    s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
+Color _wordStatusColor(String s) => s == 'learned'
+    ? AppTheme.primary
+    : s == 'difficult'
+        ? AppTheme.error
+        : AppTheme.secondary;
 
-String _wordStatusLabel(String s) =>
-    s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
+String _wordStatusLabel(String s) => s == 'learning'
+    ? 'Learning'
+    : s == 'learned'
+        ? 'Learned'
+        : 'Difficult';
 
 class WordsScreen extends ConsumerStatefulWidget {
   const WordsScreen({super.key});
@@ -20,7 +26,8 @@ class WordsScreen extends ConsumerStatefulWidget {
   ConsumerState<WordsScreen> createState() => _WordsScreenState();
 }
 
-class _WordsScreenState extends ConsumerState<WordsScreen> with SingleTickerProviderStateMixin {
+class _WordsScreenState extends ConsumerState<WordsScreen>
+    with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   String? _selectedCategory;
   late TabController _tabController;
@@ -65,7 +72,9 @@ class _WordsScreenState extends ConsumerState<WordsScreen> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Words'),
-        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/')),
+        leading: BackButton(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/')),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -116,14 +125,15 @@ class _WordsScreenState extends ConsumerState<WordsScreen> with SingleTickerProv
                     },
                   ),
                 ),
-                ...(ref.watch(categoryListProvider).valueOrNull ?? []).map((cat) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(cat.name),
-                    selected: _selectedCategory == cat.name,
-                    onSelected: (_) => _onCategoryTap(cat.name),
-                  ),
-                )),
+                ...(ref.watch(categoryListProvider).valueOrNull ?? [])
+                    .map((cat) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(cat.name),
+                            selected: _selectedCategory == cat.name,
+                            onSelected: (_) => _onCategoryTap(cat.name),
+                          ),
+                        )),
               ],
             ),
           ),
@@ -145,7 +155,10 @@ class _WordsScreenState extends ConsumerState<WordsScreen> with SingleTickerProv
   Widget _buildList(AsyncValue<List<Word>> wordsAsync, bool showLearned) {
     return wordsAsync.when(
       data: (allWords) {
-        final words = allWords.where((w) => showLearned ? w.status == 'learned' : w.status != 'learned').toList();
+        final words = allWords
+            .where((w) =>
+                showLearned ? w.status == 'learned' : w.status != 'learned')
+            .toList();
         if (words.isEmpty) {
           return _EmptyState(onAdd: () => context.push('/words/new'));
         }
@@ -181,7 +194,9 @@ class _WordCard extends StatelessWidget {
         ),
         subtitle: Text(
           word.translation,
-          style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: GoogleFonts.nunito(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -227,7 +242,9 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Add your first word!',
-            style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(

@@ -50,8 +50,7 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
       final reachedTarget = targets.isReached(l, r, w, s);
 
       final test = MockTest(
-        date:
-            '${_selectedDate.year}-'
+        date: '${_selectedDate.year}-'
             '${_selectedDate.month.toString().padLeft(2, '0')}-'
             '${_selectedDate.day.toString().padLeft(2, '0')}',
         listeningScore: l,
@@ -89,8 +88,7 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
           initialValue: value,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             isDense: true,
           ),
           hint: Text('Select', style: GoogleFonts.nunito(fontSize: 14)),
@@ -121,8 +119,8 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Add Mock Test',
-              style:
-                  GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900)),
+              style: GoogleFonts.nunito(
+                  fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 20),
           InkWell(
             onTap: _pickDate,
@@ -147,8 +145,8 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _scoreDropdown('Reading', _reading,
-                    (v) => setState(() => _reading = v)),
+                child: _scoreDropdown(
+                    'Reading', _reading, (v) => setState(() => _reading = v)),
               ),
             ],
           ),
@@ -156,8 +154,8 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
           Row(
             children: [
               Expanded(
-                child: _scoreDropdown('Writing', _writing,
-                    (v) => setState(() => _writing = v)),
+                child: _scoreDropdown(
+                    'Writing', _writing, (v) => setState(() => _writing = v)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -171,8 +169,7 @@ class _MockTestFormState extends ConsumerState<MockTestForm> {
             width: double.infinity,
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppTheme.primary),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.primary),
               child: _saving
                   ? const SizedBox(
                       height: 20,

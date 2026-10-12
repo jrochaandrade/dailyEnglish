@@ -14,7 +14,8 @@ class PhrasalVerbRepository {
 
   Future<PhrasalVerb?> getById(int id) async {
     final db = await _futureDb;
-    final maps = await db.query('phrasal_verbs', where: 'id = ?', whereArgs: [id]);
+    final maps =
+        await db.query('phrasal_verbs', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) return null;
     return PhrasalVerb.fromMap(maps.first);
   }
@@ -48,7 +49,8 @@ class PhrasalVerbRepository {
 
   Future<void> update(PhrasalVerb pv) async {
     final db = await _futureDb;
-    await db.update('phrasal_verbs', pv.toMap(), where: 'id = ?', whereArgs: [pv.id]);
+    await db.update('phrasal_verbs', pv.toMap(),
+        where: 'id = ?', whereArgs: [pv.id]);
   }
 
   Future<void> delete(int id) async {

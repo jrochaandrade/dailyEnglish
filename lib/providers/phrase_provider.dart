@@ -52,7 +52,8 @@ class PhraseListNotifier extends AsyncNotifier<List<Phrase>> {
 }
 
 final phraseListProvider =
-    AsyncNotifierProvider<PhraseListNotifier, List<Phrase>>(PhraseListNotifier.new);
+    AsyncNotifierProvider<PhraseListNotifier, List<Phrase>>(
+        PhraseListNotifier.new);
 
 final phraseDetailProvider = FutureProvider.family<Phrase?, int>((ref, id) {
   return ref.watch(phraseRepositoryProvider).getById(id);

@@ -30,13 +30,10 @@ class BackupService {
         return;
       }
 
-      final date = DateTime.now()
-          .toIso8601String()
-          .replaceAll(':', '-')
-          .split('.')[0];
+      final date =
+          DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
       final tempDir = await getTemporaryDirectory();
-      final tempPath =
-          join(tempDir.path, 'daily_english_backup_$date.db');
+      final tempPath = join(tempDir.path, 'daily_english_backup_$date.db');
       final tempFile = await file.copy(tempPath);
 
       if (!context.mounted) return;

@@ -16,7 +16,9 @@ class DiaryListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Diary'),
-        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/')),
+        leading: BackButton(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/')),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/diary/new'),
@@ -29,7 +31,8 @@ class DiaryListScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.edit_note_rounded, size: 80, color: Colors.grey),
+                    const Icon(Icons.edit_note_rounded,
+                        size: 80, color: Colors.grey),
                     const SizedBox(height: 16),
                     Text(
                       'No entries yet.',
@@ -42,7 +45,10 @@ class DiaryListScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       'Write about your day in English!',
-                      style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -53,7 +59,8 @@ class DiaryListScreen extends ConsumerWidget {
                 itemBuilder: (_, i) => _DiaryCard(entry: entries[i]),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('Erro ao carregar o diário.')),
+        error: (e, _) =>
+            const Center(child: Text('Erro ao carregar o diário.')),
       ),
     );
   }
@@ -65,7 +72,8 @@ class _DiaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = "${entry.createdAt.day.toString().padLeft(2, '0')}/${entry.createdAt.month.toString().padLeft(2, '0')}/${entry.createdAt.year}";
+    final dateStr =
+        "${entry.createdAt.day.toString().padLeft(2, '0')}/${entry.createdAt.month.toString().padLeft(2, '0')}/${entry.createdAt.year}";
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -85,14 +93,19 @@ class _DiaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               entry.content,
-              style: GoogleFonts.nunito(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
             Text(
               dateStr,
-              style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.secondary),
+              style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.secondary),
             ),
           ],
         ),

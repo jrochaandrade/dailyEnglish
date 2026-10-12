@@ -116,8 +116,8 @@ class _MockTargetsSheetState extends ConsumerState<MockTargetsSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Mock Test Targets',
-              style:
-                  GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900)),
+              style: GoogleFonts.nunito(
+                  fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 20),
           _scoreDropdown(
               'Overall Target', _overall, (v) => setState(() => _overall = v)),
@@ -158,8 +158,7 @@ class _MockTargetsSheetState extends ConsumerState<MockTargetsSheet> {
                           .any((v) => v == null)
                   ? null
                   : _save,
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppTheme.primary),
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.primary),
               child: _saving
                   ? const SizedBox(
                       height: 20,

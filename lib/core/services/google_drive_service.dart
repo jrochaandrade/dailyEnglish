@@ -36,8 +36,12 @@ class GoogleDriveService {
   GoogleDriveService(this._ref);
   final Ref _ref;
 
+  static const _driveScopes = ['https://www.googleapis.com/auth/drive'];
+
   final _signIn = GoogleSignIn(
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+    // drive.file cannot list files created by an older app installation. The
+    // full Drive scope is needed to recover legacy Daily English backups.
+    scopes: _driveScopes,
   );
 
   static const _folderName = 'Daily English Backups';
@@ -45,9 +49,14 @@ class GoogleDriveService {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   Future<GoogleSignInAccount?> signIn() async {
-    return _signIn.currentUser ??
+    final account = _signIn.currentUser ??
         await _signIn.signInSilently() ??
         await _signIn.signIn();
+    if (account == null) return null;
+
+    // Ask again when this installation has an older drive.file grant.
+    final granted = await _signIn.requestScopes(_driveScopes);
+    return granted ? account : null;
   }
 
   Future<void> signOut() => _signIn.signOut();
@@ -79,6 +88,30 @@ class GoogleDriveService {
     return folder.id!;
   }
 
+  Future<List<drive.File>> _listBackupFiles(
+      drive.DriveApi api, String folderId) async {
+    final byId = <String, drive.File>{};
+    final queries = [
+      "'$folderId' in parents and name contains 'daily_english_backup_' and trashed=false",
+      "name contains 'daily_english_backup_' and trashed=false",
+    ];
+    for (final query in queries) {
+      final response = await api.files.list(
+        q: query,
+        orderBy: 'modifiedTime desc',
+        $fields: 'files(id,name,modifiedTime,size,mimeType,parents)',
+        spaces: 'drive',
+      );
+      for (final file in response.files ?? <drive.File>[]) {
+        if (file.id != null) byId[file.id!] = file;
+      }
+    }
+    final files = byId.values.toList()
+      ..sort((a, b) => (b.modifiedTime ?? DateTime(1970))
+          .compareTo(a.modifiedTime ?? DateTime(1970)));
+    return files;
+  }
+
   static String _pad(int n) => n.toString().padLeft(2, '0');
 
   static String _formatDate(DateTime dt) =>
@@ -107,7 +140,9 @@ class GoogleDriveService {
     try {
       final dbPath = await getDatabasesPath();
       final dbFile = File(join(dbPath, 'daily_english.db'));
-      if (!await dbFile.exists()) throw Exception('Banco de dados não encontrado');
+      if (!await dbFile.exists()) {
+        throw Exception('Banco de dados não encontrado');
+      }
 
       final client = await _authClient();
       if (client == null) {
@@ -177,25 +212,22 @@ class GoogleDriveService {
       final api = drive.DriveApi(client);
       final folderId = await _ensureFolder(api);
 
-      final res = await api.files.list(
-        q: "'$folderId' in parents and trashed=false",
-        orderBy: 'modifiedTime desc',
-        $fields: 'files(id,name,modifiedTime)',
-        spaces: 'drive',
-      );
-
-      final files = res.files ?? [];
+      final files = await _listBackupFiles(api, folderId);
       if (files.isEmpty) {
         client.close();
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nenhum backup encontrado no Google Drive.')),
+          const SnackBar(
+              content: Text('Nenhum backup encontrado no Google Drive.')),
         );
         return;
       }
 
       // Pick backup
-      if (!context.mounted) { client.close(); return; }
+      if (!context.mounted) {
+        client.close();
+        return;
+      }
       final selected = await showDialog<drive.File>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -231,10 +263,16 @@ class GoogleDriveService {
         ),
       );
 
-      if (selected == null) { client.close(); return; }
+      if (selected == null) {
+        client.close();
+        return;
+      }
 
       // Confirm overwrite
-      if (!context.mounted) { client.close(); return; }
+      if (!context.mounted) {
+        client.close();
+        return;
+      }
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -256,15 +294,22 @@ class GoogleDriveService {
         ),
       );
 
-      if (confirmed != true) { client.close(); return; }
+      if (confirmed != true) {
+        client.close();
+        return;
+      }
 
-      if (!context.mounted) { client.close(); return; }
+      if (!context.mounted) {
+        client.close();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Row(children: [
           SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            child:
+                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
           ),
           SizedBox(width: 12),
           Text('Baixando backup…'),

@@ -6,6 +6,8 @@ class StudyMaterial {
   final int sizeBytes;
   final String? mimeType;
   final String? processingError;
+  final int? disciplineId;
+  final int? topicId;
 
   const StudyMaterial({
     this.id,
@@ -15,6 +17,8 @@ class StudyMaterial {
     required this.sizeBytes,
     this.mimeType,
     this.processingError,
+    this.disciplineId,
+    this.topicId,
   });
 
   factory StudyMaterial.fromJson(Map<String, dynamic> json) => StudyMaterial(
@@ -25,11 +29,14 @@ class StudyMaterial {
         sizeBytes: json['size_bytes'] as int? ?? 0,
         mimeType: json['mime_type'] as String?,
         processingError: json['processing_error'] as String?,
+        disciplineId:
+            (json['discipline'] as Map<String, dynamic>?)?['id'] as int?,
+        topicId: (json['topic'] as Map<String, dynamic>?)?['id'] as int?,
       );
 }
 
 String formatMaterialSize(int bytes) {
-  if (bytes < 1024) return '\${bytes} B';
-  if (bytes < 1024 * 1024) return '\${(bytes / 1024).toStringAsFixed(1)} KB';
-  return '\${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }

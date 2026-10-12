@@ -32,7 +32,8 @@ class CategoriesScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.label_outline_rounded, size: 80, color: Colors.grey),
+                  const Icon(Icons.label_outline_rounded,
+                      size: 80, color: Colors.grey),
                   const SizedBox(height: 16),
                   Text(
                     'Nenhuma categoria.',
@@ -57,7 +58,8 @@ class CategoriesScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: categories.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, indent: 16, endIndent: 16),
             itemBuilder: (_, i) => _CategoryTile(
               category: categories[i],
               onEdit: () => _showEditDialog(context, ref, categories[i]),
@@ -66,12 +68,14 @@ class CategoriesScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('Erro ao carregar categorias.')),
+        error: (e, _) =>
+            const Center(child: Text('Erro ao carregar categorias.')),
       ),
     );
   }
 
-  void _showEditDialog(BuildContext context, WidgetRef ref, Category? existing) {
+  void _showEditDialog(
+      BuildContext context, WidgetRef ref, Category? existing) {
     final controller = TextEditingController(text: existing?.name ?? '');
     final isNew = existing == null;
 
@@ -101,14 +105,17 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _save(BuildContext ctx, WidgetRef ref, String value, Category? existing) async {
+  Future<void> _save(
+      BuildContext ctx, WidgetRef ref, String value, Category? existing) async {
     final name = value.trim();
     if (name.isEmpty) return;
     try {
       if (existing == null) {
         await ref.read(categoryListProvider.notifier).addCategory(name);
       } else {
-        await ref.read(categoryListProvider.notifier).updateCategory(existing.id!, name);
+        await ref
+            .read(categoryListProvider.notifier)
+            .updateCategory(existing.id!, name);
       }
       if (ctx.mounted) Navigator.pop(ctx);
     } catch (_) {
@@ -126,7 +133,8 @@ class CategoriesScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remover Categoria'),
-        content: Text('Remover "${category.name}"? As palavras nessa categoria não serão apagadas.'),
+        content: Text(
+            'Remover "${category.name}"? As palavras nessa categoria não serão apagadas.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -135,9 +143,12 @@ class CategoriesScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(categoryListProvider.notifier).deleteCategory(category.id!);
+              await ref
+                  .read(categoryListProvider.notifier)
+                  .deleteCategory(category.id!);
             },
-            child: const Text('Remover', style: TextStyle(color: AppTheme.error)),
+            child:
+                const Text('Remover', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),

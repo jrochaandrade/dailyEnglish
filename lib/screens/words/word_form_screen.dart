@@ -89,9 +89,11 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
     }
     _debounceTimer = Timer(const Duration(milliseconds: 600), () async {
       final results = await ref.read(wordRepositoryProvider).search(value);
-      final exact = results.where(
-        (w) => w.word.toLowerCase() == value.toLowerCase(),
-      ).toList();
+      final exact = results
+          .where(
+            (w) => w.word.toLowerCase() == value.toLowerCase(),
+          )
+          .toList();
       if (mounted) {
         setState(() => _duplicateWord = exact.isNotEmpty ? exact.first : null);
       }
@@ -173,7 +175,8 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
   String? _notEmpty(String? v) =>
       v == null || v.trim().isEmpty ? 'Campo obrigatório' : null;
 
-  String? _nullable(String? v) => v == null || v.trim().isEmpty ? null : v.trim();
+  String? _nullable(String? v) =>
+      v == null || v.trim().isEmpty ? null : v.trim();
 
   Future<void> _pasteFromClipboard() async {
     final data = await Clipboard.getData('text/plain');
@@ -191,16 +194,28 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
         }
       }
       if (startIndex == -1) return null;
-      
+
       int endIndex = text.length;
       final allLabels = [
-        'Word:', 'Translation:', 'Meaning:', 'EN:', 'In simple English:', 
-        'PT-BR:', 'PT:', 'Em português:', 'Examples:', 'Example translations:', 
-        'Synonyms:', 'Opposite:', 'Category:', 'Difficulty level:', 'Learning status:'
+        'Word:',
+        'Translation:',
+        'Meaning:',
+        'EN:',
+        'In simple English:',
+        'PT-BR:',
+        'PT:',
+        'Em português:',
+        'Examples:',
+        'Example translations:',
+        'Synonyms:',
+        'Opposite:',
+        'Category:',
+        'Difficulty level:',
+        'Learning status:'
       ];
-      
+
       final valueStart = startIndex + matchedLabel.length;
-      
+
       for (final l in allLabels) {
         final idx = text.indexOf(l, valueStart);
         if (idx != -1 && idx < endIndex) {
@@ -213,11 +228,15 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
     List<String> splitList(String? block) {
       if (block == null || block.isEmpty) return [];
       if (block.contains('\n')) {
-        return block.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        return block
+            .split('\n')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
       final matches = RegExp(r'[^.!?]+[.!?]+').allMatches(block);
       if (matches.isNotEmpty) {
-         return matches.map((m) => m.group(0)!.trim()).toList();
+        return matches.map((m) => m.group(0)!.trim()).toList();
       }
       return [block.trim()];
     }
@@ -228,15 +247,20 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
 
       final translationMatch = extractValue(['Translation:']);
       if (translationMatch != null) {
-        final parts = translationMatch.split(RegExp(r'[/;]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        final parts = translationMatch
+            .split(RegExp(r'[/;]'))
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
         if (parts.isNotEmpty) _translationCtrl.text = parts[0];
         if (parts.length > 1) _translation2Ctrl.text = parts[1];
-        if (parts.length > 2) _translation3Ctrl.text = parts.sublist(2).join(' / ');
+        if (parts.length > 2)
+          _translation3Ctrl.text = parts.sublist(2).join(' / ');
       }
 
       final meaningEn = extractValue(['EN:', 'In simple English:']);
       if (meaningEn != null) _meaningCtrl.text = meaningEn;
-      
+
       final meaningPt = extractValue(['PT-BR:', 'PT:', 'Em português:']);
       if (meaningPt != null) _meaningPtCtrl.text = meaningPt;
 
@@ -252,8 +276,18 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
 
       final synonymsMatch = extractValue(['Synonyms:']);
       if (synonymsMatch != null) {
-        final parts = synonymsMatch.split(RegExp(r'[,;/]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-        final synCtrls = [_synonym1Ctrl, _synonym2Ctrl, _synonym3Ctrl, _synonym4Ctrl, _synonym5Ctrl];
+        final parts = synonymsMatch
+            .split(RegExp(r'[,;/]'))
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        final synCtrls = [
+          _synonym1Ctrl,
+          _synonym2Ctrl,
+          _synonym3Ctrl,
+          _synonym4Ctrl,
+          _synonym5Ctrl
+        ];
         for (int i = 0; i < parts.length && i < synCtrls.length; i++) {
           synCtrls[i].text = parts[i];
         }
@@ -264,11 +298,18 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
 
       final categoryMatch = extractValue(['Category:']);
       if (categoryMatch != null) {
-        final cats = ref.read(categoryListProvider).valueOrNull?.map((c) => c.name).toList() ?? [];
-        final cat = cats.firstWhere((c) => c.toLowerCase() == categoryMatch.toLowerCase(), orElse: () => '');
+        final cats = ref
+                .read(categoryListProvider)
+                .valueOrNull
+                ?.map((c) => c.name)
+                .toList() ??
+            [];
+        final cat = cats.firstWhere(
+            (c) => c.toLowerCase() == categoryMatch.toLowerCase(),
+            orElse: () => '');
         if (cat.isNotEmpty) _selectedCategory = cat;
       }
-      
+
       final diffMatch = extractValue(['Difficulty level:']);
       if (diffMatch != null) {
         final d = diffMatch.toLowerCase();
@@ -280,7 +321,7 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
           _difficulty = 3;
         }
       }
-      
+
       final statusMatch = extractValue(['Learning status:']);
       if (statusMatch != null) {
         final s = statusMatch.toLowerCase();
@@ -342,7 +383,9 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(_isEditing ? 'Palavra atualizada com sucesso!' : 'Palavra salva com sucesso!'),
+        content: Text(_isEditing
+            ? 'Palavra atualizada com sucesso!'
+            : 'Palavra salva com sucesso!'),
         backgroundColor: AppTheme.primary,
       ));
       if (context.canPop()) {
@@ -388,30 +431,45 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
           children: [
             const _SectionLabel('REQUIRED'),
             _Field(controller: _wordCtrl, label: 'Word', validator: _notEmpty),
-            if (_duplicateWord != null) _DuplicateWarning(word: _duplicateWord!),
+            if (_duplicateWord != null)
+              _DuplicateWarning(word: _duplicateWord!),
             const SizedBox(height: 12),
-            _Field(controller: _translationCtrl, label: 'Translation', validator: _notEmpty),
+            _Field(
+                controller: _translationCtrl,
+                label: 'Translation',
+                validator: _notEmpty),
             const SizedBox(height: 12),
-            _Field(controller: _translation2Ctrl, label: 'Translation 2 (optional)'),
+            _Field(
+                controller: _translation2Ctrl,
+                label: 'Translation 2 (optional)'),
             const SizedBox(height: 12),
-            _Field(controller: _translation3Ctrl, label: 'Translation 3 (optional)'),
+            _Field(
+                controller: _translation3Ctrl,
+                label: 'Translation 3 (optional)'),
             const SizedBox(height: 20),
             const _SectionLabel('DETAILS'),
-            _Field(controller: _meaningCtrl, label: 'Meaning (In simple English)'),
+            _Field(
+                controller: _meaningCtrl, label: 'Meaning (In simple English)'),
             const SizedBox(height: 12),
             _Field(controller: _meaningPtCtrl, label: 'Meaning (Em português)'),
             const SizedBox(height: 12),
             _Field(controller: _example1Ctrl, label: 'Example 1'),
             const SizedBox(height: 12),
-            _Field(controller: _exampleTranslation1Ctrl, label: 'Example 1 Translation'),
+            _Field(
+                controller: _exampleTranslation1Ctrl,
+                label: 'Example 1 Translation'),
             const SizedBox(height: 12),
             _Field(controller: _example2Ctrl, label: 'Example 2'),
             const SizedBox(height: 12),
-            _Field(controller: _exampleTranslation2Ctrl, label: 'Example 2 Translation'),
+            _Field(
+                controller: _exampleTranslation2Ctrl,
+                label: 'Example 2 Translation'),
             const SizedBox(height: 12),
             _Field(controller: _example3Ctrl, label: 'Example 3'),
             const SizedBox(height: 12),
-            _Field(controller: _exampleTranslation3Ctrl, label: 'Example 3 Translation'),
+            _Field(
+                controller: _exampleTranslation3Ctrl,
+                label: 'Example 3 Translation'),
             const SizedBox(height: 12),
             const SizedBox(height: 8),
             const _SectionLabel('SYNONYMS'),
@@ -433,7 +491,8 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
               initialValue: _selectedCategory,
               decoration: const InputDecoration(hintText: 'Select a category'),
               items: (ref.watch(categoryListProvider).valueOrNull ?? [])
-                  .map((c) => DropdownMenuItem(value: c.name, child: Text(c.name)))
+                  .map((c) =>
+                      DropdownMenuItem(value: c.name, child: Text(c.name)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedCategory = v),
             ),
@@ -441,14 +500,26 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
             const _SectionLabel('DIFFICULTY'),
             Row(
               children: [
-                _DiffChip(label: 'Easy', value: 1, selected: _difficulty == 1,
-                    color: AppTheme.primary, onTap: () => setState(() => _difficulty = 1)),
+                _DiffChip(
+                    label: 'Easy',
+                    value: 1,
+                    selected: _difficulty == 1,
+                    color: AppTheme.primary,
+                    onTap: () => setState(() => _difficulty = 1)),
                 const SizedBox(width: 8),
-                _DiffChip(label: 'Medium', value: 2, selected: _difficulty == 2,
-                    color: AppTheme.warning, onTap: () => setState(() => _difficulty = 2)),
+                _DiffChip(
+                    label: 'Medium',
+                    value: 2,
+                    selected: _difficulty == 2,
+                    color: AppTheme.warning,
+                    onTap: () => setState(() => _difficulty = 2)),
                 const SizedBox(width: 8),
-                _DiffChip(label: 'Hard', value: 3, selected: _difficulty == 3,
-                    color: AppTheme.error, onTap: () => setState(() => _difficulty = 3)),
+                _DiffChip(
+                    label: 'Hard',
+                    value: 3,
+                    selected: _difficulty == 3,
+                    color: AppTheme.error,
+                    onTap: () => setState(() => _difficulty = 3)),
               ],
             ),
             const SizedBox(height: 32),
@@ -456,8 +527,10 @@ class _WordFormScreenState extends ConsumerState<WordFormScreen> {
               onPressed: _isLoading ? null : _save,
               child: _isLoading
                   ? const SizedBox(
-                      height: 20, width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Text('Save'),
             ),
@@ -523,7 +596,8 @@ class _DuplicateWarning extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const Icon(Icons.warning_amber_rounded,
+              color: AppTheme.warning, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -585,16 +659,20 @@ class _DiffChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
+          color:
+              selected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? color : Colors.transparent, width: 2),
+          border: Border.all(
+              color: selected ? color : Colors.transparent, width: 2),
         ),
         child: Text(
           label,
           style: GoogleFonts.nunito(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: selected
+                ? color
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),

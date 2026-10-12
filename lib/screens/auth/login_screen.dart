@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _passwordController.text,
         );
       }
-      if (mounted) context.go('/materials');
+      if (mounted) context.go('/areas');
     } on AuthApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } finally {

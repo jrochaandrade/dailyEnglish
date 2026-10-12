@@ -11,19 +11,32 @@ class PhraseDetailScreen extends ConsumerWidget {
   final int phraseId;
   const PhraseDetailScreen({super.key, required this.phraseId});
 
-  Color _statusColor(String s) =>
-      s == 'learned' ? AppTheme.primary : s == 'difficult' ? AppTheme.error : AppTheme.secondary;
+  Color _statusColor(String s) => s == 'learned'
+      ? AppTheme.primary
+      : s == 'difficult'
+          ? AppTheme.error
+          : AppTheme.secondary;
 
-  String _statusLabel(String s) =>
-      s == 'learning' ? 'Learning' : s == 'learned' ? 'Learned' : 'Difficult';
+  String _statusLabel(String s) => s == 'learning'
+      ? 'Learning'
+      : s == 'learned'
+          ? 'Learned'
+          : 'Difficult';
 
-  Color _diffColor(int d) =>
-      d == 1 ? AppTheme.primary : d == 2 ? AppTheme.warning : AppTheme.error;
+  Color _diffColor(int d) => d == 1
+      ? AppTheme.primary
+      : d == 2
+          ? AppTheme.warning
+          : AppTheme.error;
 
-  String _diffLabel(int d) => d == 1 ? 'Easy' : d == 2 ? 'Medium' : 'Hard';
+  String _diffLabel(int d) => d == 1
+      ? 'Easy'
+      : d == 2
+          ? 'Medium'
+          : 'Hard';
 
-  TextStyle _bodyStyle(BuildContext context) =>
-      GoogleFonts.nunito(fontSize: 15, color: Theme.of(context).colorScheme.onSurface);
+  TextStyle _bodyStyle(BuildContext context) => GoogleFonts.nunito(
+      fontSize: 15, color: Theme.of(context).colorScheme.onSurface);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,7 +46,8 @@ class PhraseDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Phrase Details'),
         leading: BackButton(
-          onPressed: () => context.canPop() ? context.pop() : context.go('/phrases'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/phrases'),
         ),
         actions: [
           IconButton(
@@ -73,12 +87,16 @@ class PhraseDetailScreen extends ConsumerWidget {
                             icon: const Icon(Icons.volume_up_rounded),
                             color: AppTheme.secondary,
                             tooltip: 'Ouvir pronúncia',
-                            onPressed: () => ref.read(audioServiceProvider).speak(phrase.phrase),
+                            onPressed: () => ref
+                                .read(audioServiceProvider)
+                                .speak(phrase.phrase),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: _statusColor(phrase.status).withValues(alpha: 0.15),
+                              color: _statusColor(phrase.status)
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -116,14 +134,20 @@ class PhraseDetailScreen extends ConsumerWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: TappableText(text: phrase.meaningEn!, style: _bodyStyle(context))),
+                            Expanded(
+                                child: TappableText(
+                                    text: phrase.meaningEn!,
+                                    style: _bodyStyle(context))),
                             IconButton(
-                              icon: const Icon(Icons.volume_up_rounded, size: 18),
+                              icon:
+                                  const Icon(Icons.volume_up_rounded, size: 18),
                               color: AppTheme.secondary,
                               padding: const EdgeInsets.only(left: 4),
                               constraints: const BoxConstraints(),
                               visualDensity: VisualDensity.compact,
-                              onPressed: () => ref.read(audioServiceProvider).speak(phrase.meaningEn!),
+                              onPressed: () => ref
+                                  .read(audioServiceProvider)
+                                  .speak(phrase.meaningEn!),
                             ),
                           ],
                         ),
@@ -133,7 +157,8 @@ class PhraseDetailScreen extends ConsumerWidget {
                         Text(
                           phrase.meaningPt!,
                           style: _bodyStyle(context).copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
@@ -142,18 +167,40 @@ class PhraseDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              if ([phrase.example1, phrase.example2, phrase.example3].any((e) => e != null)) ...[
+              if ([phrase.example1, phrase.example2, phrase.example3]
+                  .any((e) => e != null)) ...[
                 _InfoCard(
                   title: 'EXAMPLES',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (phrase.example1 != null)
-                        _ExampleItem(number: 1, text: phrase.example1!, translation: phrase.exampleTranslation1, style: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(phrase.example1!)),
+                        _ExampleItem(
+                            number: 1,
+                            text: phrase.example1!,
+                            translation: phrase.exampleTranslation1,
+                            style: _bodyStyle(context),
+                            onSpeak: () => ref
+                                .read(audioServiceProvider)
+                                .speak(phrase.example1!)),
                       if (phrase.example2 != null)
-                        _ExampleItem(number: 2, text: phrase.example2!, translation: phrase.exampleTranslation2, style: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(phrase.example2!)),
+                        _ExampleItem(
+                            number: 2,
+                            text: phrase.example2!,
+                            translation: phrase.exampleTranslation2,
+                            style: _bodyStyle(context),
+                            onSpeak: () => ref
+                                .read(audioServiceProvider)
+                                .speak(phrase.example2!)),
                       if (phrase.example3 != null)
-                        _ExampleItem(number: 3, text: phrase.example3!, translation: phrase.exampleTranslation3, style: _bodyStyle(context), onSpeak: () => ref.read(audioServiceProvider).speak(phrase.example3!)),
+                        _ExampleItem(
+                            number: 3,
+                            text: phrase.example3!,
+                            translation: phrase.exampleTranslation3,
+                            style: _bodyStyle(context),
+                            onSpeak: () => ref
+                                .read(audioServiceProvider)
+                                .speak(phrase.example3!)),
                     ],
                   ),
                 ),
@@ -162,9 +209,11 @@ class PhraseDetailScreen extends ConsumerWidget {
               _InfoCard(
                 title: 'DIFFICULTY',
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _diffColor(phrase.difficulty).withValues(alpha: 0.15),
+                    color:
+                        _diffColor(phrase.difficulty).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -190,29 +239,42 @@ class PhraseDetailScreen extends ConsumerWidget {
                         onTap: () async {
                           if (selected) return;
                           try {
-                            await ref.read(phraseListProvider.notifier).updatePhrase(
-                                  phrase.copyWith(status: s, updatedAt: DateTime.now()),
+                            await ref
+                                .read(phraseListProvider.notifier)
+                                .updatePhrase(
+                                  phrase.copyWith(
+                                      status: s, updatedAt: DateTime.now()),
                                 );
                             ref.invalidate(phraseDetailProvider(phraseId));
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Status atualizado!')),
+                              const SnackBar(
+                                  content: Text('Status atualizado!')),
                             );
                           } catch (_) {}
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: selected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
+                            color: selected
+                                ? color.withValues(alpha: 0.15)
+                                : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: selected ? color : Colors.transparent, width: 2),
+                            border: Border.all(
+                                color: selected ? color : Colors.transparent,
+                                width: 2),
                           ),
                           child: Text(
                             _statusLabel(s),
                             style: GoogleFonts.nunito(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: selected
+                                  ? color
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -224,8 +286,10 @@ class PhraseDetailScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               OutlinedButton.icon(
                 onPressed: () => _confirmDelete(context, ref),
-                icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
-                label: const Text('Delete', style: TextStyle(color: AppTheme.error)),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: AppTheme.error),
+                label: const Text('Delete',
+                    style: TextStyle(color: AppTheme.error)),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppTheme.error),
                   minimumSize: const Size.fromHeight(48),
@@ -248,17 +312,25 @@ class PhraseDetailScreen extends ConsumerWidget {
         title: const Text('Delete Phrase'),
         content: const Text('Tem certeza que deseja remover esta frase?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(phraseListProvider.notifier).deletePhrase(phraseId);
+                await ref
+                    .read(phraseListProvider.notifier)
+                    .deletePhrase(phraseId);
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Frase removida.')),
                 );
-                if (context.canPop()) { context.pop(); } else { context.go('/phrases'); }
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/phrases');
+                }
               } catch (_) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -266,7 +338,8 @@ class PhraseDetailScreen extends ConsumerWidget {
                 );
               }
             },
-            child: const Text('Remover', style: TextStyle(color: AppTheme.error)),
+            child:
+                const Text('Remover', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -332,7 +405,10 @@ class _ExampleItem extends StatelessWidget {
             children: [
               Text(
                 '$number. ',
-                style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.secondary),
+                style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.secondary),
               ),
               Expanded(child: TappableText(text: text, style: style)),
               if (onSpeak != null)

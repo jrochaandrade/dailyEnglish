@@ -43,14 +43,22 @@ class WordRepository {
         final minLen = nWord.length < q.length ? nWord.length : q.length;
         int prefix = 0;
         for (int i = 0; i < minLen; i++) {
-          if (nWord[i] == q[i]) { prefix++; } else { break; }
+          if (nWord[i] == q[i]) {
+            prefix++;
+          } else {
+            break;
+          }
         }
         if (prefix >= minLen - 2 && prefix >= 4) return 1;
       }
 
       // Translation fields: exact match or translation contains the query only.
       // No reverse-contains here to avoid false positives.
-      for (final raw in [w.translation, w.translation2 ?? '', w.translation3 ?? '']) {
+      for (final raw in [
+        w.translation,
+        w.translation2 ?? '',
+        w.translation3 ?? ''
+      ]) {
         if (raw.isEmpty) continue;
         final nT = _removeDiacritics(raw.toLowerCase().trim());
         if (nT == q || nT.contains(q)) return 1;
@@ -60,15 +68,15 @@ class WordRepository {
     }
 
     final scores = <Word, int>{for (final w in words) w: score(w)};
-    return words
-        .where((w) => scores[w]! > 0)
-        .toList()
+    return words.where((w) => scores[w]! > 0).toList()
       ..sort((a, b) => scores[b]!.compareTo(scores[a]!));
   }
 
   String _removeDiacritics(String str) {
-    var withDia = 'ÀÁÂÃÄÅàáâãäåÒÓÔÕÕÖØòóôõöøÈÉÊËèéêëðÇçÐÌÍÎÏìíîïÙÚÛÜùúûüÑñŠšŸÿýŽž';
-    var withoutDia = 'AAAAAAaaaaaaOOOOOOOooooooEEEEeeeeeCcDIIIIiiiiUUUUuuuuNnSsYyyZz';
+    var withDia =
+        'ÀÁÂÃÄÅàáâãäåÒÓÔÕÕÖØòóôõöøÈÉÊËèéêëðÇçÐÌÍÎÏìíîïÙÚÛÜùúûüÑñŠšŸÿýŽž';
+    var withoutDia =
+        'AAAAAAaaaaaaOOOOOOOooooooEEEEeeeeeCcDIIIIiiiiUUUUuuuuNnSsYyyZz';
     for (int i = 0; i < withDia.length; i++) {
       str = str.replaceAll(withDia[i], withoutDia[i]);
     }
@@ -104,7 +112,8 @@ class WordRepository {
 
   Future<void> update(Word word) async {
     final db = await _futureDb;
-    await db.update('words', word.toMap(), where: 'id = ?', whereArgs: [word.id]);
+    await db
+        .update('words', word.toMap(), where: 'id = ?', whereArgs: [word.id]);
   }
 
   Future<void> delete(int id) async {

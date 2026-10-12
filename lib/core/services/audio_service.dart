@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-final audioServiceProvider = Provider<AudioService>((ref) => AudioService.instance);
+final audioServiceProvider =
+    Provider<AudioService>((ref) => AudioService.instance);
 
 class AudioService {
   AudioService._();

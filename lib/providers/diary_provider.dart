@@ -36,7 +36,8 @@ class DiaryListNotifier extends AsyncNotifier<List<DiaryEntry>> {
 }
 
 final diaryListProvider =
-    AsyncNotifierProvider<DiaryListNotifier, List<DiaryEntry>>(DiaryListNotifier.new);
+    AsyncNotifierProvider<DiaryListNotifier, List<DiaryEntry>>(
+        DiaryListNotifier.new);
 
 final diaryDetailProvider = FutureProvider.family<DiaryEntry?, int>((ref, id) {
   return ref.watch(diaryRepositoryProvider).getById(id);

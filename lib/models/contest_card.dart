@@ -12,6 +12,7 @@ class ContestCard {
   final double easeFactor;
   final int repetitions;
   final int interval;
+  final DateTime? lastReviewAt;
 
   const ContestCard({
     this.id,
@@ -27,6 +28,7 @@ class ContestCard {
     this.easeFactor = 2.5,
     this.repetitions = 0,
     this.interval = 0,
+    this.lastReviewAt,
   });
 
   factory ContestCard.fromMap(Map<String, dynamic> map) => ContestCard(
@@ -45,6 +47,9 @@ class ContestCard {
         easeFactor: (map['ease_factor'] as num?)?.toDouble() ?? 2.5,
         repetitions: map['repetitions'] as int? ?? 0,
         interval: map['review_interval'] as int? ?? 0,
+        lastReviewAt: map['last_review_at'] == null
+            ? null
+            : DateTime.tryParse(map['last_review_at'] as String),
       );
 
   Map<String, dynamic> toMap() => {
@@ -61,6 +66,7 @@ class ContestCard {
         'ease_factor': easeFactor,
         'repetitions': repetitions,
         'review_interval': interval,
+        'last_review_at': lastReviewAt?.toIso8601String(),
       };
 
   ContestCard copyWith({
@@ -77,6 +83,7 @@ class ContestCard {
     double? easeFactor,
     int? repetitions,
     int? interval,
+    DateTime? lastReviewAt,
   }) =>
       ContestCard(
         id: id ?? this.id,
@@ -92,5 +99,6 @@ class ContestCard {
         easeFactor: easeFactor ?? this.easeFactor,
         repetitions: repetitions ?? this.repetitions,
         interval: interval ?? this.interval,
+        lastReviewAt: lastReviewAt ?? this.lastReviewAt,
       );
 }

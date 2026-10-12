@@ -67,6 +67,32 @@ class ContestCardRepository {
   Future<int> insert(ContestCard card) async =>
       (await _futureDb).insert('contest_cards', card.toMap());
 
+  Future<void> upsertGenerated(ContestCard card) async {
+    final db = await _futureDb;
+    final existing = await db.query(
+      'contest_cards',
+      columns: ['id'],
+      where: 'subject = ? AND deck = ? AND front = ?',
+      whereArgs: [card.subject, card.deck, card.front],
+      limit: 1,
+    );
+    if (existing.isEmpty) {
+      await db.insert('contest_cards', card.toMap());
+      return;
+    }
+    await db.update(
+      'contest_cards',
+      {
+        'back': card.back,
+        'note': card.note,
+        'source': card.source,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [existing.first['id']],
+    );
+  }
+
   Future<void> delete(int id) async => (await _futureDb)
       .delete('contest_cards', where: 'id = ?', whereArgs: [id]);
 
@@ -78,9 +104,27 @@ class ContestCardRepository {
           'ease_factor': card.easeFactor,
           'repetitions': card.repetitions,
           'review_interval': card.interval,
+          'last_review_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',
         whereArgs: [card.id]);
+  }
+
+  Future<void> updateContent(ContestCard card) async {
+    await (await _futureDb).update(
+      'contest_cards',
+      {
+        'subject': card.subject,
+        'deck': card.deck,
+        'front': card.front,
+        'back': card.back,
+        'note': card.note,
+        'source': card.source,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [card.id],
+    );
   }
 }
