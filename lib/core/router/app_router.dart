@@ -26,6 +26,7 @@ import '../../screens/study/study_log_screen.dart';
 import '../../screens/concursos/contest_home_screen.dart';
 import '../../screens/concursos/contest_cards_screen.dart';
 import '../../screens/concursos/contest_performance_screen.dart';
+import '../../screens/materials/summary_notebooks_screen.dart';
 import '../../models/contest_card.dart';
 import '../../screens/start/start_screen.dart';
 import '../../screens/materials/materials_screen.dart';
@@ -213,6 +214,11 @@ final appRouter = GoRouter(
           type: state.uri.queryParameters['type'],
         ),
       ),
+    ),
+    GoRoute(
+      path: '/summary-notebooks',
+      builder: (context, state) =>
+          const AuthGate(child: SummaryNotebooksScreen()),
     ),
     GoRoute(
       path: '/login',

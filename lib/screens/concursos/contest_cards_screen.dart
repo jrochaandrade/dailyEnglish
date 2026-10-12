@@ -548,6 +548,10 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
           easeFactor: result.easeFactor,
           repetitions: result.repetitions,
           interval: result.interval));
+      // Atualiza imediatamente as telas que abriram a revisão. Assim, ao
+      // voltar antes de concluir o baralho, o cartão já aparece com o novo
+      // intervalo sem exigir sair e entrar novamente no aplicativo.
+      ref.invalidate(contestCardListProvider);
     } catch (error) {
       if (mounted) {
         setState(() => _answering = false);
@@ -600,7 +604,7 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
         title: Text('Revisão ${_index + 1}/${_cards.length}'),
         leading: const BackButton(),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(children: [
           LinearProgressIndicator(
@@ -611,18 +615,16 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: 16),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
-                child: _ContestFlipCard(
-                  front: card.front,
-                  back: card.back,
-                  note: card.note,
-                  source: card.source,
-                  revealed: _revealed,
-                  onTap: () => setState(() => _revealed = !_revealed),
-                ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: _ContestFlipCard(
+                front: card.front,
+                back: card.back,
+                note: card.note,
+                source: card.source,
+                revealed: _revealed,
+                onTap: () => setState(() => _revealed = !_revealed),
               ),
             ),
           ),
@@ -633,17 +635,26 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
                 icon: const Icon(Icons.visibility_outlined),
                 label: const Text('Mostrar resposta'))
           else
-            Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
-              for (final item in [
-                (0, 'Errei'),
-                (3, 'Difícil'),
-                (4, 'Bom'),
-                (5, 'Fácil')
-              ])
-                OutlinedButton(
-                    onPressed: _answering ? null : () => _answer(item.$1),
-                    child: Text(item.$2)),
-            ]),
+            Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final item in [
+                    (0, 'Errei', AppTheme.error),
+                    (3, 'Difícil', AppTheme.warning),
+                    (4, 'Bom', AppTheme.secondary),
+                    (5, 'Fácil', AppTheme.primary),
+                  ])
+                    OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: item.$3,
+                          side: BorderSide(color: item.$3, width: 1.5),
+                          backgroundColor: item.$3.withValues(alpha: .12),
+                        ),
+                        onPressed: _answering ? null : () => _answer(item.$1),
+                        child: Text(item.$2)),
+                ]),
         ]),
       ),
     );
@@ -747,7 +758,9 @@ class _ContestCardFace extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: SizedBox(
-        height: 350,
+        // A área maior deixa a leitura confortável; textos muito longos
+        // continuam rolando dentro da própria carta.
+        height: 480,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(

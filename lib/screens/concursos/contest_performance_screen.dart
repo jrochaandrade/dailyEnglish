@@ -2,14 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/study_content_api_service.dart';
 import '../../models/contest_card.dart';
+import '../../models/study_content.dart';
 import '../../providers/contest_card_provider.dart';
 
-class ContestPerformanceScreen extends ConsumerWidget {
+class ContestPerformanceScreen extends ConsumerStatefulWidget {
   const ContestPerformanceScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ContestPerformanceScreen> createState() =>
+      _ContestPerformanceScreenState();
+}
+
+class _ContestPerformanceScreenState
+    extends ConsumerState<ContestPerformanceScreen> {
+  late final Future<List<StudyContent>> _contentsFuture =
+      StudyContentApiService().list();
+
+  @override
+  Widget build(BuildContext context) {
     final cards = ref.watch(contestCardListProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Desempenho · Concursos')),
@@ -17,7 +29,15 @@ class ContestPerformanceScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
             Center(child: Text('Não foi possível carregar: $error')),
-        data: (items) => _PerformanceBody(cards: items),
+        data: (items) => FutureBuilder<List<StudyContent>>(
+          future: _contentsFuture,
+          builder: (context, snapshot) => _PerformanceBody(
+            cards: items,
+            questionCount: snapshot.data?.fold<int>(
+                    0, (total, content) => total + content.questions.length) ??
+                0,
+          ),
+        ),
       ),
     );
   }
@@ -25,7 +45,8 @@ class ContestPerformanceScreen extends ConsumerWidget {
 
 class _PerformanceBody extends StatelessWidget {
   final List<ContestCard> cards;
-  const _PerformanceBody({required this.cards});
+  final int questionCount;
+  const _PerformanceBody({required this.cards, required this.questionCount});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +66,7 @@ class _PerformanceBody extends StatelessWidget {
             style:
                 GoogleFonts.nunito(fontSize: 26, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
-        Text('Acompanhe as revisões dos seus cartões de concurso.',
+        Text('Acompanhe seus cartões e questões de concurso.',
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 22),
@@ -61,6 +82,10 @@ class _PerformanceBody extends StatelessWidget {
                 label: 'Cartões',
                 value: '${cards.length}',
                 icon: Icons.style_rounded),
+            _Metric(
+                label: 'Questões',
+                value: '$questionCount',
+                icon: Icons.quiz_outlined),
             _Metric(
                 label: 'Revisados',
                 value: '$reviewed',

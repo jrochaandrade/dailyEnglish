@@ -8,6 +8,7 @@ import '../../models/contest_card.dart';
 import '../../repositories/contest_card_repository.dart';
 import '../../core/utils/markdown_text.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/summary_notebook_api_service.dart';
 
 class StudyContentScreen extends StatefulWidget {
   final String? type;
@@ -30,6 +31,8 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   String _questionTopicFilter = '';
   String _questionDisciplineFilter = '';
   String _questionMaterialFilter = '';
+  String _summaryDisciplineFilter = '';
+  final Set<int> _selectedSummaryIds = {};
 
   @override
   void initState() {
@@ -122,6 +125,16 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
 
   Widget _summariesBody(
       BuildContext context, Map<String, List<StudyContent>> groups) {
+    final summaries = _contents
+        .where(_matchesType)
+        .where((content) =>
+            _summaryDisciplineFilter.isEmpty ||
+            content.disciplineName == _summaryDisciplineFilter)
+        .toList();
+    final summaryGroups = <String, List<StudyContent>>{};
+    for (final content in summaries) {
+      summaryGroups.putIfAbsent(content.topicName, () => []).add(content);
+    }
     return _loading
         ? ListView(children: const [
             SizedBox(
@@ -137,6 +150,60 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
               Text('Materiais gerados na Plataforma de Estudos.',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              if (!_loading && _message == null) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          const Expanded(
+                            child: Text('Caderno de resumo',
+                                style: TextStyle(fontWeight: FontWeight.w900)),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => context.push('/summary-notebooks'),
+                            icon: const Icon(Icons.menu_book_outlined),
+                            label: const Text('Meus cadernos'),
+                          ),
+                        ]),
+                        DropdownButtonFormField<String>(
+                          value: _summaryDisciplineFilter,
+                          decoration: const InputDecoration(
+                              labelText: 'Filtrar por disciplina'),
+                          items: [
+                            const DropdownMenuItem(
+                                value: '', child: Text('Todas as disciplinas')),
+                            ..._summaryDisciplines.map((discipline) =>
+                                DropdownMenuItem(
+                                    value: discipline,
+                                    child: Text(discipline,
+                                        overflow: TextOverflow.ellipsis))),
+                          ],
+                          onChanged: (value) => setState(() {
+                            _summaryDisciplineFilter = value ?? '';
+                            _selectedSummaryIds.clear();
+                          }),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _selectedSummaryIds.isEmpty
+                                ? null
+                                : _createSummaryNotebook,
+                            icon: const Icon(Icons.auto_awesome),
+                            label: Text(
+                                'Criar caderno com ${_selectedSummaryIds.length} resumo(s)'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (_message != null)
                 Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
@@ -145,10 +212,107 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                 const Padding(
                     padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(child: Text('Nenhum conteúdo disponível.'))),
-              ...groups.entries
-                  .map((entry) => _topicCard(context, entry.key, entry.value)),
+              ...summaryGroups.entries.map((entry) =>
+                  _summarySelectionTopic(context, entry.key, entry.value)),
             ],
           );
+  }
+
+  List<String> get _summaryDisciplines => _contents
+      .where(_matchesType)
+      .map((content) => content.disciplineName ?? 'Sem disciplina')
+      .toSet()
+      .toList()
+    ..sort();
+
+  Widget _summarySelectionTopic(
+      BuildContext context, String topic, List<StudyContent> contents) {
+    return Card(
+      margin: const EdgeInsets.only(top: 14),
+      child: ExpansionTile(
+        title:
+            Text(topic, style: GoogleFonts.nunito(fontWeight: FontWeight.w900)),
+        subtitle: Text('${contents.length} resumo(s)'),
+        children: [
+          for (final content in contents)
+            CheckboxListTile(
+              value: _selectedSummaryIds.contains(content.id),
+              onChanged: (selected) => setState(() {
+                if (selected == true) {
+                  _selectedSummaryIds.add(content.id);
+                } else {
+                  _selectedSummaryIds.remove(content.id);
+                }
+              }),
+              title: Text(content.materialTitle ?? 'Resumo'),
+              subtitle: Text(
+                MarkdownText.plain(content.summary ?? ''),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              secondary: const Icon(Icons.summarize_outlined),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createSummaryNotebook() async {
+    final nameController = TextEditingController();
+    var includeVisual = false;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Novo caderno de resumo'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Nome do caderno'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: includeVisual,
+              onChanged: (value) => setDialogState(() => includeVisual = value),
+              title: const Text('Incluir mapa visual'),
+              subtitle: const Text('Pode consumir mais tokens da IA.'),
+            ),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(
+                    context, '${nameController.text.trim()}|$includeVisual'),
+                child: const Text('Criar')),
+          ],
+        ),
+      ),
+    );
+    if (name == null || !mounted) return;
+    final separator = name.lastIndexOf('|');
+    final notebookName = separator < 0 ? name : name.substring(0, separator);
+    if (notebookName.trim().isEmpty) return;
+    final visualRequested =
+        separator >= 0 && name.substring(separator + 1) == 'true';
+    try {
+      await SummaryNotebookApiService().create(
+        name: notebookName,
+        sourceContentIds: _selectedSummaryIds.toList(),
+        includeVisual: visualRequested,
+      );
+      if (!mounted) return;
+      setState(() => _selectedSummaryIds.clear());
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Caderno criado e melhorado pela IA.')));
+      await context.push('/summary-notebooks');
+    } on SummaryNotebookApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Não foi possível criar: ${error.code}')));
+    }
   }
 
   List<Map<String, dynamic>> get _flashcards => _contents
