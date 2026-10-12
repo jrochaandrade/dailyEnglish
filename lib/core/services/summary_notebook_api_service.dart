@@ -54,6 +54,25 @@ class SummaryNotebookApiService {
         as Map<String, dynamic>)['data'] as Map<String, dynamic>);
   }
 
+  Future<SummaryNotebook> appendEntry(
+    int notebookId, {
+    required String type,
+    required String prompt,
+    required String answer,
+    String explanation = '',
+  }) async {
+    final response =
+        await _request('POST', '/summary-notebooks/$notebookId/entries', body: {
+      'type': type,
+      'prompt': prompt,
+      'answer': answer,
+      'explanation': explanation,
+    });
+    _check(response);
+    return SummaryNotebook.fromJson((jsonDecode(response.body)
+        as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+  }
+
   Future<http.Response> _request(String method, String path,
       {Map<String, dynamic>? body}) async {
     final preferences = await SharedPreferences.getInstance();

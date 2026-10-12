@@ -85,6 +85,50 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
     }
   }
 
+  Future<void> _addToNotebook({
+    required String type,
+    required String prompt,
+    required String answer,
+    String explanation = '',
+  }) async {
+    try {
+      final notebooks = await SummaryNotebookApiService().list();
+      if (!mounted) return;
+      if (notebooks.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Crie um caderno antes de adicionar conteúdo.')));
+        return;
+      }
+      final selected = await showDialog<dynamic>(
+        context: context,
+        builder: (dialogContext) => SimpleDialog(
+          title: const Text('Adicionar ao caderno'),
+          children: notebooks
+              .map((notebook) => SimpleDialogOption(
+                    onPressed: () => Navigator.pop(dialogContext, notebook),
+                    child: Text(notebook.name),
+                  ))
+              .toList(),
+        ),
+      );
+      if (selected == null || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A IA está organizando o conteúdo...')));
+      await SummaryNotebookApiService().appendEntry(selected.id,
+          type: type, prompt: prompt, answer: answer, explanation: explanation);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Conteúdo adicionado ao caderno com destaque da pegadinha.')));
+      }
+    } on SummaryNotebookApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Não foi possível adicionar: ${error.code}')));
+      }
+    }
+  }
+
   Map<String, List<StudyContent>> _groupByTopic() {
     final groups = <String, List<StudyContent>>{};
     for (final content in _contents.where(_matchesType)) {
@@ -560,6 +604,19 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                     child: Text(
                         MarkdownText.plain(question['explanation'] as String)),
                   ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _addToNotebook(
+                    type: 'question',
+                    prompt: MarkdownText.plain(
+                        question['question'] as String? ?? ''),
+                    answer: answer,
+                    explanation: MarkdownText.plain(
+                        question['explanation'] as String? ?? ''),
+                  ),
+                  icon: const Icon(Icons.menu_book_outlined),
+                  label: const Text('Adicionar ao caderno com IA'),
+                ),
               ],
             ]),
           ),

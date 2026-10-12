@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/sm2.dart';
 import '../../models/contest_card.dart';
 import '../../providers/contest_card_provider.dart';
+import '../../core/services/summary_notebook_api_service.dart';
 
 const _contestCardPrompt =
     '''Você é um especialista em preparação para concursos públicos.
@@ -506,6 +507,48 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
   bool _revealed = false;
   bool _answering = false;
 
+  Future<void> _addToNotebook(ContestCard card) async {
+    try {
+      final notebooks = await SummaryNotebookApiService().list();
+      if (!mounted) return;
+      if (notebooks.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Crie um caderno antes de adicionar conteúdo.')));
+        return;
+      }
+      final selected = await showDialog<dynamic>(
+        context: context,
+        builder: (dialogContext) => SimpleDialog(
+          title: const Text('Adicionar ao caderno'),
+          children: notebooks
+              .map((notebook) => SimpleDialogOption(
+                    onPressed: () => Navigator.pop(dialogContext, notebook),
+                    child: Text(notebook.name),
+                  ))
+              .toList(),
+        ),
+      );
+      if (selected == null || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A IA está organizando o conteúdo...')));
+      await SummaryNotebookApiService().appendEntry(selected.id,
+          type: 'flashcard',
+          prompt: card.front,
+          answer: card.back,
+          explanation: card.note ?? '');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Flashcard adicionado ao caderno com destaque da pegadinha.')));
+      }
+    } on SummaryNotebookApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Não foi possível adicionar: ${error.code}')));
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -655,6 +698,14 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
                         onPressed: _answering ? null : () => _answer(item.$1),
                         child: Text(item.$2)),
                 ]),
+          if (_revealed) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _addToNotebook(card),
+              icon: const Icon(Icons.menu_book_outlined),
+              label: const Text('Adicionar ao caderno com IA'),
+            ),
+          ],
         ]),
       ),
     );
