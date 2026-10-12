@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../services/audio_service.dart';
 import '../../screens/home/home_screen.dart';
+import '../../screens/home/sync_screen.dart';
 import '../../screens/words/words_screen.dart';
 import '../../screens/words/word_form_screen.dart';
 import '../../screens/words/word_detail_screen.dart';
@@ -185,6 +186,17 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/study-log',
       builder: (context, state) => const StudyLogScreen(),
+    ),
+    GoRoute(
+      path: '/sync',
+      builder: (context, state) => AuthGate(
+        child: SyncScreen(
+          title: state.uri.queryParameters['area'] == 'concursos'
+              ? 'Sincronização · Concursos'
+              : 'Sincronização',
+          contestsOnly: state.uri.queryParameters['area'] == 'concursos',
+        ),
+      ),
     ),
     GoRoute(
       path: '/concursos',

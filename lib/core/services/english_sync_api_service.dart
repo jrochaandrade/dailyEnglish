@@ -25,24 +25,15 @@ class EnglishSyncApiService {
     'contest_cards',
   ];
 
-  Future<Map<String, dynamic>> syncLocalDatabase() async {
+  Future<Map<String, dynamic>> syncLocalDatabase(
+      {Set<String>? onlyTables}) async {
     final preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('api_token');
     if (token == null || token.isEmpty) {
       throw const EnglishSyncException('Faça login para sincronizar os dados.');
     }
 
-    final db = await AppDatabase().database;
-    final snapshot = <String, dynamic>{
-      'schema_version': 17,
-      'tables': <String, dynamic>{},
-    };
-    final snapshotTables = snapshot['tables'] as Map<String, dynamic>;
-    for (final table in tables) {
-      final rows = await db.query(table);
-      snapshotTables[table] =
-          rows.map((row) => Map<String, dynamic>.from(row)).toList();
-    }
+    final snapshot = await localSnapshot(onlyTables: onlyTables);
 
     final response = await http
         .post(
@@ -67,6 +58,22 @@ class EnglishSyncApiService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> localSnapshot({Set<String>? onlyTables}) async {
+    final db = await AppDatabase().database;
+    final snapshot = <String, dynamic>{
+      'schema_version': 18,
+      'tables': <String, dynamic>{},
+    };
+    final snapshotTables = snapshot['tables'] as Map<String, dynamic>;
+    for (final table in tables
+        .where((table) => onlyTables == null || onlyTables.contains(table))) {
+      final rows = await db.query(table);
+      snapshotTables[table] =
+          rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    }
+    return snapshot;
+  }
+
   Future<Map<String, dynamic>> downloadSnapshot() async {
     final preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('api_token');
@@ -80,6 +87,10 @@ class EnglishSyncApiService {
         'Authorization': 'Bearer $token',
       },
     );
+    if (response.statusCode == 401) {
+      throw const EnglishSyncException(
+          'Sua sessão expirou. Faça login novamente.');
+    }
     if (response.statusCode != 200) {
       throw EnglishSyncException(
           'Falha ao baixar os dados (${response.statusCode}).');
@@ -87,7 +98,7 @@ class EnglishSyncApiService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<int> downloadAndMerge() async {
+  Future<int> downloadAndMerge({Set<String>? onlyTables}) async {
     final snapshot = await downloadSnapshot();
     final tables = snapshot['tables'] as Map<String, dynamic>? ?? {};
     final db = await AppDatabase().database;
@@ -96,6 +107,7 @@ class EnglishSyncApiService {
     await db.transaction((txn) async {
       for (final table in tables.entries) {
         if (!EnglishSyncApiService.tables.contains(table.key)) continue;
+        if (onlyTables != null && !onlyTables.contains(table.key)) continue;
         final rows = table.value as List<dynamic>? ?? [];
         for (final item in rows) {
           if (item is! Map<String, dynamic>) continue;

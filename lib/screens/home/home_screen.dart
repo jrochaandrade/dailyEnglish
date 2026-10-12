@@ -25,6 +25,7 @@ enum _HomeMenuItem {
   restoreFromDrive,
   syncEnglishData,
   downloadEnglishData,
+  syncScreen,
 }
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -194,6 +195,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     _syncEnglishData();
                                   case _HomeMenuItem.downloadEnglishData:
                                     _downloadEnglishData();
+                                  case _HomeMenuItem.syncScreen:
+                                    context.push('/sync');
                                 }
                               },
                               itemBuilder: (context) => [
@@ -263,6 +266,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   child: ListTile(
                                     leading: Icon(Icons.cloud_download_rounded),
                                     title: Text('Baixar dados do servidor'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: _HomeMenuItem.syncScreen,
+                                  child: ListTile(
+                                    leading: Icon(Icons.compare_arrows_rounded),
+                                    title: Text('Tela de sincronização'),
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),

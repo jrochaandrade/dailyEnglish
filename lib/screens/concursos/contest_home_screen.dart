@@ -3,18 +3,27 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/auth_api_service.dart';
+import '../../providers/contest_card_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ContestHomeScreen extends StatefulWidget {
+class ContestHomeScreen extends ConsumerStatefulWidget {
   const ContestHomeScreen({super.key});
 
   @override
-  State<ContestHomeScreen> createState() => _ContestHomeScreenState();
+  ConsumerState<ContestHomeScreen> createState() => _ContestHomeScreenState();
 }
 
-class _ContestHomeScreenState extends State<ContestHomeScreen> {
+class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
   Future<void> _logout() async {
     await AuthApiService().logout();
     if (mounted) context.go('/login');
+  }
+
+  Future<void> _openSync() async {
+    await context.push('/sync?area=concursos');
+    ref.invalidate(contestCardListProvider);
+    ref.invalidate(contestSubjectsProvider);
+    ref.invalidate(contestDueCountProvider);
   }
 
   @override
@@ -28,6 +37,11 @@ class _ContestHomeScreenState extends State<ContestHomeScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Sincronizar concursos',
+            onPressed: _openSync,
+            icon: const Icon(Icons.sync_rounded),
+          ),
           IconButton(
             tooltip: 'Sair',
             onPressed: _logout,
@@ -75,6 +89,12 @@ class _ContestHomeScreenState extends State<ContestHomeScreen> {
             title: 'Desempenho',
             description: 'Veja sua ofensiva, revisões e cartões difíceis.',
             onTap: () => context.push('/concursos/performance'),
+          ),
+          _AreaCard(
+            icon: Icons.sync_rounded,
+            title: 'Sincronização',
+            description: 'Confira e receba os cartões da retaguarda.',
+            onTap: _openSync,
           ),
         ],
       ),
