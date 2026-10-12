@@ -34,6 +34,15 @@ class SummaryNotebookApiService {
         as Map<String, dynamic>)['data'] as Map<String, dynamic>);
   }
 
+  Future<SummaryNotebook> createEmpty(String name) async {
+    final response = await _request('POST', '/summary-notebooks/empty', body: {
+      'name': name,
+    });
+    _check(response);
+    return SummaryNotebook.fromJson((jsonDecode(response.body)
+        as Map<String, dynamic>)['data'] as Map<String, dynamic>);
+  }
+
   Future<SummaryNotebook> update(
     int id, {
     String? name,

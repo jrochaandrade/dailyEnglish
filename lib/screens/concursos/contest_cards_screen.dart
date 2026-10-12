@@ -8,6 +8,7 @@ import '../../core/utils/sm2.dart';
 import '../../models/contest_card.dart';
 import '../../providers/contest_card_provider.dart';
 import '../../core/services/summary_notebook_api_service.dart';
+import '../../models/summary_notebook.dart';
 
 const _contestCardPrompt =
     '''Você é um especialista em preparação para concursos públicos.
@@ -511,24 +512,49 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
     try {
       final notebooks = await SummaryNotebookApiService().list();
       if (!mounted) return;
-      if (notebooks.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Crie um caderno antes de adicionar conteúdo.')));
-        return;
-      }
-      final selected = await showDialog<dynamic>(
+      var selected = await showDialog<dynamic>(
         context: context,
         builder: (dialogContext) => SimpleDialog(
           title: const Text('Adicionar ao caderno'),
-          children: notebooks
-              .map((notebook) => SimpleDialogOption(
-                    onPressed: () => Navigator.pop(dialogContext, notebook),
-                    child: Text(notebook.name),
-                  ))
-              .toList(),
+          children: [
+            ...notebooks.map((notebook) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(dialogContext, notebook),
+                  child: Text(notebook.name),
+                )),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, 'create'),
+              child: const Text('＋ Criar novo caderno'),
+            ),
+          ],
         ),
       );
-      if (selected == null || !mounted) return;
+      if (selected == 'create' && mounted) {
+        final nameController = TextEditingController();
+        selected = await showDialog<dynamic>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Novo caderno'),
+            content: TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Nome do caderno'),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar')),
+              FilledButton(
+                  onPressed: () =>
+                      Navigator.pop(dialogContext, nameController.text.trim()),
+                  child: const Text('Criar')),
+            ],
+          ),
+        );
+        if (selected is String && selected.isNotEmpty) {
+          selected = await SummaryNotebookApiService().createEmpty(selected);
+        }
+      }
+      if (selected == null || selected is! SummaryNotebook || !mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('A IA está organizando o conteúdo...')));
       await SummaryNotebookApiService().appendEntry(selected.id,
