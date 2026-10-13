@@ -13,6 +13,7 @@ import '../../repositories/contest_card_repository.dart';
 import '../../core/utils/markdown_text.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/summary_notebook_api_service.dart';
+import '../../core/services/generated_flashcard_sync_service.dart';
 
 class StudyContentScreen extends StatefulWidget {
   final String? type;
@@ -49,7 +50,9 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final contents = await _api.list(includeAll: widget.type == 'summaries');
+      final contents = widget.type == 'flashcards'
+          ? await const GeneratedFlashcardSyncService().sync()
+          : await _api.list(includeAll: widget.type == 'summaries');
       List<SummaryNotebook> notebooks = [];
       try {
         notebooks = await SummaryNotebookApiService().list();
@@ -57,7 +60,9 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
         // A falha ao carregar os cadernos não impede a leitura dos resumos.
       }
       await _syncQuestionAnswers();
-      await _syncFlashcardsForReview(contents);
+      if (widget.type != 'flashcards') {
+        await _syncFlashcardsForReview(contents);
+      }
       final localCards =
           await ContestCardRepository(AppDatabase().database).getAll();
       if (!mounted) return;

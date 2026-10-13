@@ -24,10 +24,21 @@ class _ContestPerformanceScreenState
       StudyContentApiService().list();
   late final Future<List<Map<String, dynamic>>> _questionAnswersFuture =
       _loadQuestionAnswers();
+  late final Future<List<Map<String, dynamic>>> _flashcardReviewsFuture =
+      _loadFlashcardReviews();
 
   Future<List<Map<String, dynamic>>> _loadQuestionAnswers() async {
     final preferences = await SharedPreferences.getInstance();
     return (preferences.getStringList('question-performance-v1') ?? [])
+        .map((item) => jsonDecode(item))
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadFlashcardReviews() async {
+    final preferences = await SharedPreferences.getInstance();
+    return (preferences.getStringList('flashcard-performance-v1') ?? [])
         .map((item) => jsonDecode(item))
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
@@ -48,12 +59,17 @@ class _ContestPerformanceScreenState
           builder: (context, snapshot) =>
               FutureBuilder<List<Map<String, dynamic>>>(
             future: _questionAnswersFuture,
-            builder: (context, answersSnapshot) => _PerformanceBody(
-              cards: items,
-              questionCount: snapshot.data?.fold<int>(0,
-                      (total, content) => total + content.questions.length) ??
-                  0,
-              questionAnswers: answersSnapshot.data ?? const [],
+            builder: (context, answersSnapshot) =>
+                FutureBuilder<List<Map<String, dynamic>>>(
+              future: _flashcardReviewsFuture,
+              builder: (context, flashcardsSnapshot) => _PerformanceBody(
+                cards: items,
+                questionCount: snapshot.data?.fold<int>(0,
+                        (total, content) => total + content.questions.length) ??
+                    0,
+                questionAnswers: answersSnapshot.data ?? const [],
+                flashcardReviews: flashcardsSnapshot.data ?? const [],
+              ),
             ),
           ),
         ),
@@ -66,10 +82,12 @@ class _PerformanceBody extends StatelessWidget {
   final List<ContestCard> cards;
   final int questionCount;
   final List<Map<String, dynamic>> questionAnswers;
+  final List<Map<String, dynamic>> flashcardReviews;
   const _PerformanceBody({
     required this.cards,
     required this.questionCount,
     required this.questionAnswers,
+    required this.flashcardReviews,
   });
 
   @override
@@ -160,6 +178,8 @@ class _PerformanceBody extends StatelessWidget {
           answers: questionAnswers,
           generatedCount: questionCount,
         ),
+        const SizedBox(height: 16),
+        _FlashcardPerformance(reviews: flashcardReviews),
       ],
     );
   }
@@ -179,6 +199,112 @@ class _PerformanceBody extends StatelessWidget {
       cursor = cursor.subtract(const Duration(days: 1));
     }
     return count;
+  }
+}
+
+class _FlashcardPerformance extends StatelessWidget {
+  final List<Map<String, dynamic>> reviews;
+  const _FlashcardPerformance({required this.reviews});
+
+  DateTime? _date(Map<String, dynamic> item) =>
+      DateTime.tryParse(item['reviewed_at'] as String? ?? '')?.toLocal();
+
+  List<Map<String, int>> _daily() {
+    final now = DateTime.now();
+    return List.generate(14, (index) {
+      final day = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: 13 - index));
+      final items = reviews.where((item) {
+        final date = _date(item);
+        return date != null &&
+            date.year == day.year &&
+            date.month == day.month &&
+            date.day == day.day;
+      });
+      final remembered =
+          items.where((item) => item['remembered'] == true).length;
+      return {
+        'total': items.length,
+        'remembered': remembered,
+        'reinforce': items.length - remembered,
+      };
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daily = _daily();
+    final maxTotal = daily.fold<int>(
+        1, (max, item) => item['total']! > max ? item['total']! : max);
+    final remembered =
+        reviews.where((item) => item['remembered'] == true).length;
+    final accuracy =
+        reviews.isEmpty ? 0 : (remembered / reviews.length * 100).round();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Desempenho dos flashcards',
+              style: GoogleFonts.nunito(
+                  fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text(
+              reviews.isEmpty
+                  ? 'Avalie flashcards para acompanhar sua evolução.'
+                  : '${reviews.length} revisões · $accuracy% lembrados',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 150,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final period in daily)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: FractionallySizedBox(
+                                heightFactor: period['total']! / maxTotal,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  alignment: Alignment.bottomCenter,
+                                  child: period['reinforce'] == 0
+                                      ? null
+                                      : FractionallySizedBox(
+                                          heightFactor: period['reinforce']! /
+                                              period['total']!,
+                                          child: Container(
+                                              color: Colors.redAccent
+                                                  .withValues(alpha: .9)),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('${period['total']}',
+                              style: const TextStyle(fontSize: 10)),
+                        ]),
+                  ),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 10),
+          Wrap(spacing: 18, children: const [
+            _Legend(color: AppTheme.primary, label: 'Lembrados'),
+            _Legend(color: Colors.redAccent, label: 'Para reforçar'),
+          ]),
+        ]),
+      ),
+    );
   }
 }
 

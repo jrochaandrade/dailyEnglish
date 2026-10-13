@@ -278,7 +278,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       _ => 'Sessão de estudo',
     };
     return PopScope(
-      canPop: context.canPop(),
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && mounted) context.go('/study');
       },
@@ -286,8 +286,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         appBar: AppBar(
           title: Text(title),
           leading: IconButton(
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/study'),
+            onPressed: () => context.go('/study'),
             icon: const Icon(Icons.arrow_back_rounded),
             tooltip: 'Voltar para Estudar',
           ),

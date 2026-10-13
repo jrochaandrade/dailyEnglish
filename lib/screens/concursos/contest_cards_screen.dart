@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/sm2.dart';
 import '../../models/contest_card.dart';
@@ -618,6 +621,18 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
           easeFactor: result.easeFactor,
           repetitions: result.repetitions,
           interval: result.interval));
+      final preferences = await SharedPreferences.getInstance();
+      final history =
+          preferences.getStringList('flashcard-performance-v1') ?? [];
+      history.add(jsonEncode({
+        'reviewed_at': DateTime.now().toIso8601String(),
+        'remembered': quality >= 4,
+        'quality': quality,
+      }));
+      if (history.length > 1000) {
+        history.removeRange(0, history.length - 1000);
+      }
+      await preferences.setStringList('flashcard-performance-v1', history);
       // Atualiza imediatamente as telas que abriram a revisão. Assim, ao
       // voltar antes de concluir o baralho, o cartão já aparece com o novo
       // intervalo sem exigir sair e entrar novamente no aplicativo.

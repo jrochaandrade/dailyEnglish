@@ -112,121 +112,128 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Estudar'),
-        leading: IconButton(
-          tooltip: 'Voltar',
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/areas'),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Cadernos de revisão',
-            onPressed: () => context.push('/summary-notebooks'),
-            icon: const Icon(Icons.menu_book_rounded),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && context.mounted) context.go('/areas');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Estudar'),
+          leading: IconButton(
+            tooltip: 'Voltar para áreas de estudo',
+            onPressed: () => context.go('/areas'),
+            icon: const Icon(Icons.arrow_back_rounded),
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _loading
-            ? ListView(children: const [
-                SizedBox(
-                    height: 280,
-                    child: Center(child: CircularProgressIndicator()))
-              ])
-            : ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  if (_error != null) ...[
-                    Text('Não foi possível carregar: $_error'),
-                    const SizedBox(height: 16),
-                  ],
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                                _summaryCount +
-                                            _flashcardCount +
-                                            _questionCount ==
-                                        0
-                                    ? Icons.task_alt_rounded
-                                    : Icons.play_circle_fill_rounded,
-                                size: 42,
-                                color: _summaryCount +
-                                            _flashcardCount +
-                                            _questionCount ==
-                                        0
-                                    ? AppTheme.primary
-                                    : Theme.of(context).colorScheme.primary),
-                            const SizedBox(height: 10),
-                            Text(
-                                _summaryCount +
-                                            _flashcardCount +
-                                            _questionCount ==
-                                        0
-                                    ? 'Estudo do dia concluído'
-                                    : 'Revisões disponíveis',
-                                style: const TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 5),
-                            Text(
-                                _summaryCount +
-                                            _flashcardCount +
-                                            _questionCount ==
-                                        0
-                                    ? 'Você concluiu todos os conteúdos planejados.'
-                                    : 'Escolha o tipo de conteúdo para começar.',
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant)),
-                            const SizedBox(height: 16),
-                            if (_summaryCount +
-                                    _flashcardCount +
-                                    _questionCount ==
-                                0)
-                              Text('Estudo do dia concluído!',
+          actions: [
+            IconButton(
+              tooltip: 'Cadernos de revisão',
+              onPressed: () => context.push('/summary-notebooks'),
+              icon: const Icon(Icons.menu_book_rounded),
+            ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _load,
+          child: _loading
+              ? ListView(children: const [
+                  SizedBox(
+                      height: 280,
+                      child: Center(child: CircularProgressIndicator()))
+                ])
+              : ListView(
+                  padding: const EdgeInsets.all(18),
+                  children: [
+                    if (_error != null) ...[
+                      Text('Não foi possível carregar: $_error'),
+                      const SizedBox(height: 16),
+                    ],
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                  _summaryCount +
+                                              _flashcardCount +
+                                              _questionCount ==
+                                          0
+                                      ? Icons.task_alt_rounded
+                                      : Icons.play_circle_fill_rounded,
+                                  size: 42,
+                                  color: _summaryCount +
+                                              _flashcardCount +
+                                              _questionCount ==
+                                          0
+                                      ? AppTheme.primary
+                                      : Theme.of(context).colorScheme.primary),
+                              const SizedBox(height: 10),
+                              Text(
+                                  _summaryCount +
+                                              _flashcardCount +
+                                              _questionCount ==
+                                          0
+                                      ? 'Estudo do dia concluído'
+                                      : 'Revisões disponíveis',
+                                  style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 5),
+                              Text(
+                                  _summaryCount +
+                                              _flashcardCount +
+                                              _questionCount ==
+                                          0
+                                      ? 'Você concluiu todos os conteúdos planejados.'
+                                      : 'Escolha o tipo de conteúdo para começar.',
                                   style: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800))
-                            else
-                              Wrap(spacing: 8, runSpacing: 8, children: [
-                                if (_summaryCount > 0)
-                                  _studyBadge('Resumos', _summaryCount,
-                                      Icons.notes_rounded),
-                                if (_flashcardCount > 0)
-                                  _studyBadge('Flashcards', _flashcardCount,
-                                      Icons.style_rounded),
-                                if (_questionCount > 0)
-                                  _studyBadge('Questões', _questionCount,
-                                      Icons.quiz_rounded),
-                              ]),
-                          ]),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant)),
+                              const SizedBox(height: 16),
+                              if (_summaryCount +
+                                      _flashcardCount +
+                                      _questionCount ==
+                                  0)
+                                Text('Estudo do dia concluído!',
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800))
+                              else
+                                Wrap(spacing: 8, runSpacing: 8, children: [
+                                  if (_summaryCount > 0)
+                                    _studyBadge('Resumos', _summaryCount,
+                                        Icons.notes_rounded),
+                                  if (_flashcardCount > 0)
+                                    _studyBadge('Flashcards', _flashcardCount,
+                                        Icons.style_rounded),
+                                  if (_questionCount > 0)
+                                    _studyBadge('Questões', _questionCount,
+                                        Icons.quiz_rounded),
+                                ]),
+                            ]),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text('Conteúdos por material',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 8),
-                  if (_contents.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 24),
-                      child: Center(child: Text('Nenhum material pendente.')),
-                    )
-                  else
-                    ..._contents
-                        .map((content) => _ContentTile(content: content)),
-                ],
-              ),
+                    const SizedBox(height: 18),
+                    const Text('Conteúdos por material',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 8),
+                    if (_contents.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 24),
+                        child: Center(child: Text('Nenhum material pendente.')),
+                      )
+                    else
+                      ..._contents
+                          .map((content) => _ContentTile(content: content)),
+                  ],
+                ),
+        ),
       ),
     );
   }

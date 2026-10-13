@@ -414,15 +414,8 @@ class _NotebookDetailScreenState extends State<_NotebookDetailScreen> {
                 if ((_notebook.content ?? '').isEmpty)
                   const Text('O caderno ainda não possui conteúdo gerado.')
                 else
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 20, 22, 24),
-                      child: NotebookContentView(
-                          markdown: _notebook.content!,
-                          visual: _notebook.visual),
-                    ),
-                  ),
+                  NotebookContentView(
+                      markdown: _notebook.content!, visual: _notebook.visual),
               ],
             ),
     );

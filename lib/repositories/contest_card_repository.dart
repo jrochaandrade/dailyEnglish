@@ -104,6 +104,24 @@ class ContestCardRepository {
   Future<void> delete(int id) async => (await _futureDb)
       .delete('contest_cards', where: 'id = ?', whereArgs: [id]);
 
+  /// Remove cópias geradas pela área de estudos que já não existem no servidor.
+  /// Cartões criados manualmente não possuem [source] e são preservados.
+  Future<void> deleteGeneratedNotIn(Set<String> activeKeys) async {
+    final db = await _futureDb;
+    final generated = await db.query(
+      'contest_cards',
+      columns: ['id', 'source', 'front'],
+      where: 'source IS NOT NULL',
+    );
+    for (final card in generated) {
+      final key = '${card['source']}\u0000${card['front']}';
+      if (!activeKeys.contains(key)) {
+        await db
+            .delete('contest_cards', where: 'id = ?', whereArgs: [card['id']]);
+      }
+    }
+  }
+
   Future<void> updateReview(ContestCard card) async {
     await (await _futureDb).update(
         'contest_cards',

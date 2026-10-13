@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/database/app_database.dart';
 import '../../core/services/study_content_api_service.dart';
+import '../../core/services/generated_flashcard_sync_service.dart';
 
 class ReviewPlanScreen extends StatefulWidget {
   const ReviewPlanScreen({super.key});
@@ -21,6 +22,11 @@ class _ReviewPlanScreenState extends State<ReviewPlanScreen> {
   }
 
   Future<Map<String, int>> _loadCounts() async {
+    try {
+      await const GeneratedFlashcardSyncService().sync();
+    } on StudyContentApiException {
+      // Mantém a contagem local quando estiver sem conexão.
+    }
     final db = await AppDatabase().database;
     final now = DateTime.now().millisecondsSinceEpoch;
     Future<int> count(String table, String column) async {
