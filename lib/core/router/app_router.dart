@@ -28,6 +28,7 @@ import '../../screens/concursos/contest_cards_screen.dart';
 import '../../screens/concursos/contest_performance_screen.dart';
 import '../../screens/materials/summary_notebooks_screen.dart';
 import '../../models/contest_card.dart';
+import '../../models/study_content.dart';
 import '../../screens/start/start_screen.dart';
 import '../../screens/materials/materials_screen.dart';
 import '../../screens/materials/study_content_screen.dart';
@@ -271,6 +272,7 @@ final appRouter = GoRouter(
           deck: state.uri.queryParameters['deck'],
           source: state.uri.queryParameters['source'],
           mode: state.uri.queryParameters['mode'] ?? 'due',
+          mindMapContent: state.extra as StudyContent?,
         ),
       ),
     ),

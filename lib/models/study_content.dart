@@ -7,6 +7,10 @@ class StudyContent {
   final DateTime? studyNextReviewAt;
   final String? title;
   final String? materialTitle;
+  final int? materialId;
+  final bool hasMindMap;
+  final String? mindMapFilename;
+  final String? mindMapMimeType;
   final String? disciplineName;
   final String topicName;
   final String? summary;
@@ -22,6 +26,10 @@ class StudyContent {
     this.studyNextReviewAt,
     this.title,
     this.materialTitle,
+    this.materialId,
+    this.hasMindMap = false,
+    this.mindMapFilename,
+    this.mindMapMimeType,
     this.disciplineName,
     required this.topicName,
     this.summary,
@@ -33,6 +41,7 @@ class StudyContent {
     final material = json['material'] as Map<String, dynamic>? ?? {};
     final topic = material['topic'] as Map<String, dynamic>? ?? {};
     final discipline = material['discipline'] as Map<String, dynamic>? ?? {};
+    final mindMap = material['mind_map'] as Map<String, dynamic>? ?? {};
 
     return StudyContent(
       id: json['id'] as int,
@@ -45,6 +54,10 @@ class StudyContent {
       title: json['title'] as String?,
       materialTitle: material['title'] as String? ??
           material['original_filename'] as String?,
+      materialId: (material['id'] as num?)?.toInt(),
+      hasMindMap: mindMap['available'] as bool? ?? false,
+      mindMapFilename: mindMap['filename'] as String?,
+      mindMapMimeType: mindMap['mime_type'] as String?,
       disciplineName: discipline['name'] as String?,
       topicName: topic['name'] as String? ?? 'Sem tópico',
       summary: json['summary'] as String?,

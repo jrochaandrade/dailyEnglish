@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/study_content.dart';
@@ -74,6 +75,27 @@ class StudyContentApiService {
     }
   }
 
+  Future<MindMapFile> downloadMindMap(int materialId) async {
+    final preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('api_token');
+    if (token == null) throw const StudyContentApiException('auth_required');
+    final response = await http.get(
+      Uri.parse('$baseUrl/materials/$materialId/mind-map'),
+      headers: {'Accept': '*/*', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 401) {
+      throw const StudyContentApiException('auth_required');
+    }
+    if (response.statusCode != 200) {
+      throw StudyContentApiException('request_failed_${response.statusCode}');
+    }
+
+    return MindMapFile(
+      bytes: response.bodyBytes,
+      mimeType: response.headers['content-type']?.split(';').first,
+    );
+  }
+
   Future<QuestionAnswerResult> submitQuestionAnswer({
     required int generatedContentId,
     required int itemIndex,
@@ -114,6 +136,13 @@ class StudyContentApiService {
       explanation: data['explanation'] as String? ?? '',
     );
   }
+}
+
+class MindMapFile {
+  final Uint8List bytes;
+  final String? mimeType;
+
+  const MindMapFile({required this.bytes, this.mimeType});
 }
 
 class QuestionAnswerResult {

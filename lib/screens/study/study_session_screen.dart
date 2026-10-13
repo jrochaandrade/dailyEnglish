@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/study_content_api_service.dart';
+import '../../core/services/mind_map_viewer.dart';
 import '../../core/database/app_database.dart';
 import '../../core/utils/markdown_text.dart';
 import '../../models/study_content.dart';
@@ -564,6 +565,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: [
+              if (content.hasMindMap)
+                OutlinedButton.icon(
+                    onPressed: () => MindMapViewer.open(context, content),
+                    icon: const Icon(Icons.account_tree_outlined),
+                    label: const Text('Abrir mapa mental')),
               if (content.summary?.trim().isNotEmpty ?? false)
                 OutlinedButton.icon(
                     onPressed: () async {
@@ -645,7 +651,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       'deck': content.topicName,
       'source': source,
     }).query;
-    await context.push('/concursos/review?$query');
+    await context.push('/concursos/review?$query', extra: content);
   }
 
   Future<void> _showSummary(StudyContent content) => showDialog<void>(
@@ -670,6 +676,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
             ),
           ),
           actions: [
+            if (content.hasMindMap)
+              TextButton.icon(
+                  onPressed: () => MindMapViewer.open(context, content),
+                  icon: const Icon(Icons.account_tree_outlined),
+                  label: const Text('Mapa mental')),
             TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Fechar'))
