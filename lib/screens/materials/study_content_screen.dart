@@ -87,25 +87,41 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
     }
   }
 
-  Future<void> _recordQuestionAnswer(
-      Map<String, dynamic> question, bool correct) async {
-    if (_questionAnswerRecorded) return;
+  Future<QuestionAnswerResult?> _recordQuestionAnswer(
+      Map<String, dynamic> question) async {
+    if (_questionAnswerRecorded) return null;
     _questionAnswerRecorded = true;
     final preferences = await SharedPreferences.getInstance();
     final saved = preferences.getStringList('question-performance-v1') ?? [];
-    saved.add(jsonEncode({
+    final item = <String, dynamic>{
       'generated_content_id': question['_contentId'],
       'item_index': question['_index'],
       'user_answer': question['_selectedAnswer'] ?? '',
       'answered_at': DateTime.now().toIso8601String(),
-      'correct': correct,
       'synced': false,
       'discipline': question['_discipline'] ?? 'Sem disciplina',
       'material': question['_material'] ?? 'Material',
-    }));
+    };
+    QuestionAnswerResult? result;
+    try {
+      result = await _api.submitQuestionAnswer(
+        generatedContentId: item['generated_content_id'] as int,
+        itemIndex: item['item_index'] as int,
+        userAnswer: item['user_answer'] as String,
+        answeredAt: item['answered_at'] as String,
+      );
+      item['correct'] = result.isCorrect;
+      item['synced'] = true;
+    } on StudyContentApiException {
+      _questionAnswerRecorded = false;
+    } catch (_) {
+      _questionAnswerRecorded = false;
+    }
+    saved.add(jsonEncode(item));
     if (saved.length > 1000) saved.removeRange(0, saved.length - 1000);
     await preferences.setStringList('question-performance-v1', saved);
-    await _syncQuestionAnswers();
+
+    return result;
   }
 
   Future<void> _syncQuestionAnswers() async {
@@ -122,12 +138,13 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
         continue;
       }
       try {
-        await _api.submitQuestionAnswer(
+        final result = await _api.submitQuestionAnswer(
           generatedContentId: item['generated_content_id'] as int,
           itemIndex: item['item_index'] as int,
           userAnswer: item['user_answer'] as String? ?? '',
           answeredAt: item['answered_at'] as String?,
         );
+        item['correct'] = result.isCorrect;
         item['synced'] = true;
         saved[index] = jsonEncode(item);
         changed = true;
@@ -139,6 +156,21 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
     }
     if (changed)
       await preferences.setStringList('question-performance-v1', saved);
+  }
+
+  bool _isCorrectQuestionOption(
+    Map<String, dynamic> option,
+    String answer,
+  ) {
+    final normalizedAnswer = answer.trim().toLowerCase();
+    final key = (option['key'] as String? ?? '').trim().toLowerCase();
+    final label = (option['label'] as String? ?? '').trim().toLowerCase();
+
+    return normalizedAnswer == key ||
+        normalizedAnswer == label ||
+        (key.isNotEmpty &&
+            RegExp('^${RegExp.escape(key)}(?:\\)|\\.|\\s|\$)')
+                .hasMatch(normalizedAnswer));
   }
 
   Future<void> _syncFlashcardsForReview(List<StudyContent> contents) async {
@@ -734,7 +766,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                 final key = option['key'] as String? ?? '';
                 final isSelected = _selectedAnswer == key;
                 final isCorrect = _questionAnswered &&
-                    key.toLowerCase() == answer.toLowerCase();
+                    _isCorrectQuestionOption(option, answer);
                 final isWrong = _questionAnswered && isSelected && !isCorrect;
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -782,11 +814,22 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                   onPressed: _selectedAnswer == null || _questionAnswered
                       ? null
                       : () async {
-                          final correct = _selectedAnswer?.toLowerCase() ==
-                              answer.toLowerCase();
                           question['_selectedAnswer'] = _selectedAnswer;
+                          final result = await _recordQuestionAnswer(question);
+                          if (!context.mounted) return;
+                          if (result == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Resposta salva. O gabarito será exibido após sincronizar.'),
+                              ),
+                            );
+                            return;
+                          }
+                          question['answer'] = result.answer;
+                          question['explanation'] = result.explanation;
+                          question['_isCorrect'] = result.isCorrect;
                           setState(() => _questionAnswered = true);
-                          await _recordQuestionAnswer(question, correct);
                         },
                   child: const Text('Responder'),
                 ),
@@ -794,13 +837,12 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
               if (_questionAnswered) ...[
                 const SizedBox(height: 14),
                 Text(
-                    _selectedAnswer?.toLowerCase() == answer.toLowerCase()
-                        ? 'Resposta correta!'
+                    question['_isCorrect'] == true
+                        ? 'Resposta correta! Gabarito: $answer'
                         : 'Resposta incorreta. Gabarito: $answer',
                     style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: _selectedAnswer?.toLowerCase() ==
-                                answer.toLowerCase()
+                        color: question['_isCorrect'] == true
                             ? Colors.green
                             : Colors.red)),
                 if ((question['explanation'] as String? ?? '').isNotEmpty)

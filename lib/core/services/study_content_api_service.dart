@@ -74,7 +74,7 @@ class StudyContentApiService {
     }
   }
 
-  Future<void> submitQuestionAnswer({
+  Future<QuestionAnswerResult> submitQuestionAnswer({
     required int generatedContentId,
     required int itemIndex,
     required String userAnswer,
@@ -104,7 +104,28 @@ class StudyContentApiService {
     if (response.statusCode != 201) {
       throw StudyContentApiException('request_failed_${response.statusCode}');
     }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>? ?? {};
+
+    return QuestionAnswerResult(
+      isCorrect: data['is_correct'] as bool? ?? false,
+      answer: data['answer'] as String? ?? '',
+      explanation: data['explanation'] as String? ?? '',
+    );
   }
+}
+
+class QuestionAnswerResult {
+  final bool isCorrect;
+  final String answer;
+  final String explanation;
+
+  const QuestionAnswerResult({
+    required this.isCorrect,
+    required this.answer,
+    required this.explanation,
+  });
 }
 
 class StudyContentApiException implements Exception {
