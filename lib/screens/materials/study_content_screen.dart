@@ -37,6 +37,9 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   String? _selectedAnswer;
   bool _questionAnswered = false;
   bool _questionAnswerRecorded = false;
+  String? _correctAnswer;
+  String? _answerExplanation;
+  bool? _answerWasCorrect;
   String _questionTopicFilter = '';
   String _questionDisciplineFilter = '';
   String _questionMaterialFilter = '';
@@ -750,7 +753,8 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
             {'key': 'Errado', 'label': 'Errado'},
           ]
         : options;
-    final answer = (question['answer'] as String? ?? '').trim();
+    final answer =
+        (_correctAnswer ?? question['answer'] as String? ?? '').trim();
     return ListView(
       padding: const EdgeInsets.fromLTRB(10, 14, 10, 18),
       children: [
@@ -883,10 +887,12 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                             );
                             return;
                           }
-                          question['answer'] = result.answer;
-                          question['explanation'] = result.explanation;
-                          question['_isCorrect'] = result.isCorrect;
-                          setState(() => _questionAnswered = true);
+                          setState(() {
+                            _correctAnswer = result.answer;
+                            _answerExplanation = result.explanation;
+                            _answerWasCorrect = result.isCorrect;
+                            _questionAnswered = true;
+                          });
                         },
                   child: const Text('Responder'),
                 ),
@@ -894,19 +900,18 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
               if (_questionAnswered) ...[
                 const SizedBox(height: 14),
                 Text(
-                    question['_isCorrect'] == true
+                    _answerWasCorrect == true
                         ? 'Resposta correta! Gabarito: $answer'
                         : 'Resposta incorreta. Gabarito: $answer',
                     style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: question['_isCorrect'] == true
+                        color: _answerWasCorrect == true
                             ? Colors.green
                             : Colors.red)),
-                if ((question['explanation'] as String? ?? '').isNotEmpty)
+                if ((_answerExplanation ?? '').isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                        MarkdownText.plain(question['explanation'] as String)),
+                    child: Text(MarkdownText.plain(_answerExplanation!)),
                   ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -915,8 +920,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                     prompt: MarkdownText.plain(
                         question['question'] as String? ?? ''),
                     answer: answer,
-                    explanation: MarkdownText.plain(
-                        question['explanation'] as String? ?? ''),
+                    explanation: MarkdownText.plain(_answerExplanation ?? ''),
                   ),
                   icon: const Icon(Icons.menu_book_outlined),
                   label: const Text('Adicionar ao caderno com IA'),
@@ -980,9 +984,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                   onChanged: (value) => setState(() {
                     _questionDisciplineFilter = value ?? '';
                     _studyIndex = 0;
-                    _selectedAnswer = null;
-                    _questionAnswered = false;
-                    _questionAnswerRecorded = false;
+                    _resetQuestionAnswerState();
                   }),
                 ),
                 const SizedBox(height: 8),
@@ -999,9 +1001,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                   onChanged: (value) => setState(() {
                     _questionTopicFilter = value ?? '';
                     _studyIndex = 0;
-                    _selectedAnswer = null;
-                    _questionAnswered = false;
-                    _questionAnswerRecorded = false;
+                    _resetQuestionAnswerState();
                   }),
                 ),
                 const SizedBox(height: 8),
@@ -1019,9 +1019,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                   onChanged: (value) => setState(() {
                     _questionMaterialFilter = value ?? '';
                     _studyIndex = 0;
-                    _selectedAnswer = null;
-                    _questionAnswered = false;
-                    _questionAnswerRecorded = false;
+                    _resetQuestionAnswerState();
                   }),
                 ),
               ],
@@ -1046,17 +1044,22 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
 
   void _nextQuestion() => setState(() {
         _studyIndex++;
-        _selectedAnswer = null;
-        _questionAnswered = false;
-        _questionAnswerRecorded = false;
+        _resetQuestionAnswerState();
       });
 
   void _previousQuestion() => setState(() {
         _studyIndex--;
-        _selectedAnswer = null;
-        _questionAnswered = false;
-        _questionAnswerRecorded = false;
+        _resetQuestionAnswerState();
       });
+
+  void _resetQuestionAnswerState() {
+    _selectedAnswer = null;
+    _questionAnswered = false;
+    _questionAnswerRecorded = false;
+    _correctAnswer = null;
+    _answerExplanation = null;
+    _answerWasCorrect = null;
+  }
 
   void _finishQuestions() {
     if (!_questionAnswered || !context.canPop()) return;
