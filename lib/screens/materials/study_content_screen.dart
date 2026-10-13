@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/study_content_api_service.dart';
 import '../../core/database/app_database.dart';
 import '../../models/study_content.dart';
@@ -30,6 +33,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   int _studyIndex = 0;
   String? _selectedAnswer;
   bool _questionAnswered = false;
+  bool _questionAnswerRecorded = false;
   String _questionTopicFilter = '';
   String _questionDisciplineFilter = '';
   String _questionMaterialFilter = '';
@@ -46,6 +50,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
     setState(() => _loading = true);
     try {
       final contents = await _api.list();
+      await _syncQuestionAnswers();
       await _syncFlashcardsForReview(contents);
       final localCards =
           await ContestCardRepository(AppDatabase().database).getAll();
@@ -67,6 +72,60 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _recordQuestionAnswer(
+      Map<String, dynamic> question, bool correct) async {
+    if (_questionAnswerRecorded) return;
+    _questionAnswerRecorded = true;
+    final preferences = await SharedPreferences.getInstance();
+    final saved = preferences.getStringList('question-performance-v1') ?? [];
+    saved.add(jsonEncode({
+      'generated_content_id': question['_contentId'],
+      'item_index': question['_index'],
+      'user_answer': question['_selectedAnswer'] ?? '',
+      'answered_at': DateTime.now().toIso8601String(),
+      'correct': correct,
+      'synced': false,
+      'discipline': question['_discipline'] ?? 'Sem disciplina',
+      'material': question['_material'] ?? 'Material',
+    }));
+    if (saved.length > 1000) saved.removeRange(0, saved.length - 1000);
+    await preferences.setStringList('question-performance-v1', saved);
+    await _syncQuestionAnswers();
+  }
+
+  Future<void> _syncQuestionAnswers() async {
+    final preferences = await SharedPreferences.getInstance();
+    final saved = preferences.getStringList('question-performance-v1') ?? [];
+    var changed = false;
+    for (var index = 0; index < saved.length; index++) {
+      final decoded = jsonDecode(saved[index]);
+      if (decoded is! Map) continue;
+      final item = Map<String, dynamic>.from(decoded);
+      if (item['synced'] == true ||
+          item['generated_content_id'] is! int ||
+          item['item_index'] is! int) {
+        continue;
+      }
+      try {
+        await _api.submitQuestionAnswer(
+          generatedContentId: item['generated_content_id'] as int,
+          itemIndex: item['item_index'] as int,
+          userAnswer: item['user_answer'] as String? ?? '',
+          answeredAt: item['answered_at'] as String?,
+        );
+        item['synced'] = true;
+        saved[index] = jsonEncode(item);
+        changed = true;
+      } on StudyContentApiException {
+        // Mantém a resposta na fila para sincronizar na próxima abertura.
+      } catch (_) {
+        // Falhas de rede não devem impedir o estudo offline.
+      }
+    }
+    if (changed)
+      await preferences.setStringList('question-performance-v1', saved);
   }
 
   Future<void> _syncFlashcardsForReview(List<StudyContent> contents) async {
@@ -399,8 +458,10 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
       .toList();
 
   List<Map<String, dynamic>> get _questions => _contents
-      .expand((content) => content.questions.map((question) => {
-            ...question,
+      .expand((content) => content.questions.asMap().entries.map((entry) => {
+            ...entry.value,
+            '_contentId': content.id,
+            '_index': entry.key,
             '_discipline': content.disciplineName ?? 'Sem disciplina',
             '_topic': content.topicName,
             '_material': content.materialTitle ?? 'Material',
@@ -549,7 +610,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
         : options;
     final answer = (question['answer'] as String? ?? '').trim();
     return ListView(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(10, 14, 10, 18),
       children: [
         _questionFilters(context),
         const SizedBox(height: 14),
@@ -558,26 +619,53 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 12),
         Card(
+          margin: EdgeInsets.zero,
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Tópico: ${question['_topic']}',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text('Material: ${question['_material']}',
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TÓPICO · ${question['_topic']}',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: .4)),
+                    const SizedBox(height: 4),
+                    Text('Material · ${question['_material']}',
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text('ENUNCIADO',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 13)),
-              const SizedBox(height: 14),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1)),
+              const SizedBox(height: 6),
               Text(
                   MarkdownText.plain(
                       question['question'] as String? ?? 'Pergunta'),
+                  textAlign: TextAlign.justify,
                   style: GoogleFonts.nunito(
-                      fontSize: 20, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 18),
+                      fontSize: 18, fontWeight: FontWeight.w800, height: 1.3)),
+              const SizedBox(height: 14),
               ...normalizedOptions.map((option) {
                 final key = option['key'] as String? ?? '';
                 final isSelected = _selectedAnswer == key;
@@ -591,31 +679,53 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                         ? Colors.green.withValues(alpha: .14)
                         : isWrong
                             ? Colors.red.withValues(alpha: .14)
-                            : null,
+                            : isSelected
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: .12)
+                                : null,
                     border: Border.all(
                         color: isCorrect
                             ? Colors.green
                             : isWrong
                                 ? Colors.red
-                                : Theme.of(context).colorScheme.outline),
+                                : isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.outline),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: RadioListTile<String>(
                     value: key,
                     groupValue: _selectedAnswer,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    visualDensity: VisualDensity.compact,
                     onChanged: _questionAnswered
                         ? null
                         : (value) => setState(() => _selectedAnswer = value),
                     title: Text(
-                        '${key.isEmpty ? '' : '$key) '}${MarkdownText.plain(option['label'] as String? ?? '')}'),
+                      '${key.isEmpty ? '' : '$key) '}${MarkdownText.plain(option['label'] as String? ?? '')}',
+                      textAlign: TextAlign.justify,
+                      style: const TextStyle(fontSize: 15, height: 1.25),
+                    ),
                   ),
                 );
               }),
-              FilledButton(
-                onPressed: _selectedAnswer == null || _questionAnswered
-                    ? null
-                    : () => setState(() => _questionAnswered = true),
-                child: const Text('Responder'),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: _selectedAnswer == null || _questionAnswered
+                      ? null
+                      : () async {
+                          final correct = _selectedAnswer?.toLowerCase() ==
+                              answer.toLowerCase();
+                          question['_selectedAnswer'] = _selectedAnswer;
+                          setState(() => _questionAnswered = true);
+                          await _recordQuestionAnswer(question, correct);
+                        },
+                  child: const Text('Responder'),
+                ),
               ),
               if (_questionAnswered) ...[
                 const SizedBox(height: 14),
@@ -658,11 +768,16 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
               onPressed: _studyIndex == 0 ? null : _previousQuestion,
               icon: const Icon(Icons.arrow_back_rounded),
               label: const Text('Anterior')),
-          FilledButton.icon(
-              onPressed:
-                  _studyIndex == questions.length - 1 ? null : _nextQuestion,
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: const Text('Próxima')),
+          if (_studyIndex == questions.length - 1)
+            FilledButton.icon(
+                onPressed: _questionAnswered ? _finishQuestions : null,
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Concluir'))
+          else
+            FilledButton.icon(
+                onPressed: _nextQuestion,
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: const Text('Próxima')),
         ]),
       ],
     );
@@ -671,74 +786,85 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   Widget _questionFilters(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.filter_list_rounded,
-                  size: 20, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
-              const Text('Filtros',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ]),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _questionDisciplineFilter,
-              decoration: const InputDecoration(labelText: 'Disciplina'),
-              items: [
-                const DropdownMenuItem(
-                    value: '', child: Text('Todas as disciplinas')),
-                ..._questionDisciplines.map((discipline) => DropdownMenuItem(
-                    value: discipline,
-                    child: Text(discipline, overflow: TextOverflow.ellipsis))),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+        title: Row(children: [
+          Icon(Icons.filter_list_rounded,
+              size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          const Text('Filtros', style: TextStyle(fontWeight: FontWeight.w800)),
+        ]),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _questionDisciplineFilter,
+                  decoration: const InputDecoration(labelText: 'Disciplina'),
+                  items: [
+                    const DropdownMenuItem(
+                        value: '', child: Text('Todas as disciplinas')),
+                    ..._questionDisciplines.map((discipline) =>
+                        DropdownMenuItem(
+                            value: discipline,
+                            child: Text(discipline,
+                                overflow: TextOverflow.ellipsis))),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _questionDisciplineFilter = value ?? '';
+                    _studyIndex = 0;
+                    _selectedAnswer = null;
+                    _questionAnswered = false;
+                    _questionAnswerRecorded = false;
+                  }),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _questionTopicFilter,
+                  decoration: const InputDecoration(labelText: 'Tópico'),
+                  items: [
+                    const DropdownMenuItem(
+                        value: '', child: Text('Todos os tópicos')),
+                    ..._questionTopics.map((topic) => DropdownMenuItem(
+                        value: topic,
+                        child: Text(topic, overflow: TextOverflow.ellipsis))),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _questionTopicFilter = value ?? '';
+                    _studyIndex = 0;
+                    _selectedAnswer = null;
+                    _questionAnswered = false;
+                    _questionAnswerRecorded = false;
+                  }),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _questionMaterialFilter,
+                  decoration: const InputDecoration(labelText: 'Material'),
+                  items: [
+                    const DropdownMenuItem(
+                        value: '', child: Text('Todos os materiais')),
+                    ..._questionMaterials.map((material) => DropdownMenuItem(
+                        value: material,
+                        child:
+                            Text(material, overflow: TextOverflow.ellipsis))),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _questionMaterialFilter = value ?? '';
+                    _studyIndex = 0;
+                    _selectedAnswer = null;
+                    _questionAnswered = false;
+                    _questionAnswerRecorded = false;
+                  }),
+                ),
               ],
-              onChanged: (value) => setState(() {
-                _questionDisciplineFilter = value ?? '';
-                _studyIndex = 0;
-                _selectedAnswer = null;
-                _questionAnswered = false;
-              }),
             ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _questionTopicFilter,
-              decoration: const InputDecoration(labelText: 'Tópico'),
-              items: [
-                const DropdownMenuItem(
-                    value: '', child: Text('Todos os tópicos')),
-                ..._questionTopics.map((topic) => DropdownMenuItem(
-                    value: topic,
-                    child: Text(topic, overflow: TextOverflow.ellipsis))),
-              ],
-              onChanged: (value) => setState(() {
-                _questionTopicFilter = value ?? '';
-                _studyIndex = 0;
-                _selectedAnswer = null;
-                _questionAnswered = false;
-              }),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _questionMaterialFilter,
-              decoration: const InputDecoration(labelText: 'Material'),
-              items: [
-                const DropdownMenuItem(
-                    value: '', child: Text('Todos os materiais')),
-                ..._questionMaterials.map((material) => DropdownMenuItem(
-                    value: material,
-                    child: Text(material, overflow: TextOverflow.ellipsis))),
-              ],
-              onChanged: (value) => setState(() {
-                _questionMaterialFilter = value ?? '';
-                _studyIndex = 0;
-                _selectedAnswer = null;
-                _questionAnswered = false;
-              }),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -759,13 +885,21 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
         _studyIndex++;
         _selectedAnswer = null;
         _questionAnswered = false;
+        _questionAnswerRecorded = false;
       });
 
   void _previousQuestion() => setState(() {
         _studyIndex--;
         _selectedAnswer = null;
         _questionAnswered = false;
+        _questionAnswerRecorded = false;
       });
+
+  void _finishQuestions() {
+    if (!_questionAnswered || !context.canPop()) return;
+    // O pop preserva a origem: sessão de estudos, área de questões ou concursos.
+    context.pop(true);
+  }
 
   Widget _topicCard(
       BuildContext context, String topic, List<StudyContent> contents) {

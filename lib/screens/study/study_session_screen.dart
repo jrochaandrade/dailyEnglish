@@ -22,7 +22,10 @@ class StudySessionScreen extends StatefulWidget {
 class _StudySessionScreenState extends State<StudySessionScreen> {
   final _api = StudyContentApiService();
   List<StudyContent> _contents = [];
+  List<StudyContent> _completedContents = [];
   Set<int> _completed = {};
+  final Map<int, Set<String>> _completedParts = {};
+  bool _completedSomething = false;
   Timer? _timer;
   DateTime? _startedAt;
   Duration _elapsed = Duration.zero;
@@ -45,10 +48,49 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       final savedIds = preferences.getStringList('${_key}-completed') ?? [];
       final savedElapsed = preferences.getInt('${_key}-elapsed') ?? 0;
       final contents = await _api.list();
+      final progress = <int, Set<String>>{};
+      for (final content in contents) {
+        final due = content.studyNextReviewAt == null ||
+            !content.studyNextReviewAt!.isAfter(DateTime.now());
+        if (due && content.studyInterval > 0) {
+          await preferences.remove(_progressKey(content.id));
+        }
+        progress[content.id] =
+            (preferences.getStringList(_progressKey(content.id)) ?? []).toSet();
+        if (content.studyInterval == 0 &&
+            _isFullyCompleted(content, progress[content.id])) {
+          try {
+            await _api.completeStudyContent(content.id);
+          } on StudyContentApiException {
+            // Retry on the next refresh if the server is temporarily offline.
+          }
+        }
+      }
       if (!mounted) return;
+      final sessionContents = contents.where(_matchesType).toList();
+      final completedIds = savedIds.map(int.tryParse).whereType<int>().toSet();
+      for (final content in sessionContents) {
+        final parts = progress[content.id] ?? <String>{};
+        if (_isCompletedForSession(content, parts)) {
+          completedIds.add(content.id);
+        }
+      }
+      final completedContents = sessionContents
+          .where((content) => completedIds.contains(content.id))
+          .toList();
+      sessionContents
+          .removeWhere((content) => completedIds.contains(content.id));
       setState(() {
-        _contents = contents.where(_matchesType).toList();
-        _completed = savedIds.map(int.tryParse).whereType<int>().toSet();
+        _contents = sessionContents;
+        _completedContents = completedContents;
+        _completed = completedIds;
+        _completedSomething = completedIds.isNotEmpty;
+        _completedParts
+          ..clear()
+          ..addAll(progress);
+        for (final content in _contents) {
+          if (_isFullyCompleted(content)) _completed.add(content.id);
+        }
         _elapsed = Duration(seconds: savedElapsed);
         _startedAt =
             started == null ? DateTime.now() : DateTime.tryParse(started);
@@ -99,8 +141,72 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   }
 
   Future<void> _toggleComplete(int id) async {
-    setState(() =>
-        _completed.contains(id) ? _completed.remove(id) : _completed.add(id));
+    setState(() {
+      if (_completed.contains(id)) {
+        _completed.remove(id);
+        final completedContent =
+            _completedContents.where((content) => content.id == id).firstOrNull;
+        if (completedContent != null) {
+          _completedContents.remove(completedContent);
+          _contents.add(completedContent);
+        }
+      } else {
+        _completed.add(id);
+        _completedSomething = true;
+        final content = _contents.where((item) => item.id == id).firstOrNull;
+        if (content != null) {
+          _contents.remove(content);
+          _completedContents.add(content);
+        }
+      }
+    });
+    await _save();
+  }
+
+  String _progressKey(int contentId) => 'study-content-progress-v1-$contentId';
+
+  Set<String> _availableParts(StudyContent content) => {
+        if (content.summary?.trim().isNotEmpty ?? false) 'summaries',
+        if (content.flashcards.isNotEmpty) 'flashcards',
+        if (content.questions.isNotEmpty) 'questions',
+      };
+
+  bool _isFullyCompleted(StudyContent content, [Set<String>? parts]) {
+    final available = _availableParts(content);
+    if (available.isEmpty) return false;
+    final completedParts = parts ?? _completedParts[content.id] ?? <String>{};
+    return available.every(completedParts.contains);
+  }
+
+  bool _isCompletedForSession(StudyContent content, [Set<String>? parts]) {
+    final completedParts = parts ?? _completedParts[content.id] ?? <String>{};
+    if (widget.type != null) return completedParts.contains(widget.type);
+    return _isFullyCompleted(content, completedParts);
+  }
+
+  Future<void> _markPartCompleted(StudyContent content, String part) async {
+    final parts = _completedParts.putIfAbsent(content.id, () => <String>{});
+    parts.add(part);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setStringList(_progressKey(content.id), parts.toList());
+    if (_isFullyCompleted(content, parts)) {
+      try {
+        await _api.completeStudyContent(content.id);
+      } on StudyContentApiException {
+        // Keep the local progress; the next refresh can retry the server sync.
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      if (_isCompletedForSession(content)) {
+        _completed.add(content.id);
+        _completedSomething = true;
+        _contents.removeWhere((item) => item.id == content.id);
+        if (!_completedContents.any((item) => item.id == content.id)) {
+          _completedContents.add(content);
+        }
+      }
+    });
     await _save();
   }
 
@@ -171,45 +277,102 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       'questions' => 'Estudar questões',
       _ => 'Sessão de estudo',
     };
-    return Scaffold(
-      appBar: AppBar(title: Text(title), actions: [
-        IconButton(
-          onPressed: _resetTimer,
-          icon: const Icon(Icons.restart_alt_rounded),
-          tooltip: 'Reiniciar cronômetro',
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && mounted) context.go('/study');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          leading: IconButton(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/study'),
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: 'Voltar para Estudar',
+          ),
+          actions: [
+            IconButton(
+              onPressed: _resetTimer,
+              icon: const Icon(Icons.restart_alt_rounded),
+              tooltip: 'Reiniciar cronômetro',
+            ),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Center(
+                    child: Text(_format(elapsed),
+                        style: const TextStyle(fontWeight: FontWeight.w800)))),
+          ],
         ),
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Center(
-                child: Text(_format(elapsed),
-                    style: const TextStyle(fontWeight: FontWeight.w800)))),
-      ]),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text('Não foi possível carregar: $_error'))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(padding: const EdgeInsets.all(16), children: [
-                    Row(children: [
-                      Expanded(
-                          child: Text(
-                              '${_completed.length} de ${_contents.length} concluídos',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w800))),
-                      TextButton.icon(
-                          onPressed: _togglePause,
-                          icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
-                          label: Text(_paused ? 'Continuar' : 'Pausar')),
-                      FilledButton(
-                          onPressed: _finish, child: const Text('Concluir'))
-                    ]),
-                    const SizedBox(height: 12),
-                    ..._groupedContents(),
-                  ]),
-                ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text('Não foi possível carregar: $_error'))
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: _contents.isEmpty
+                        ? _emptyState()
+                        : ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                                Row(children: [
+                                  Expanded(
+                                      child: Text(
+                                          '${_completedContents.length} de ${_contents.length + _completedContents.length} concluídos',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w800))),
+                                  TextButton.icon(
+                                      onPressed: _togglePause,
+                                      icon: Icon(_paused
+                                          ? Icons.play_arrow
+                                          : Icons.pause),
+                                      label: Text(
+                                          _paused ? 'Continuar' : 'Pausar')),
+                                  FilledButton(
+                                      onPressed: _finish,
+                                      child: const Text('Concluir'))
+                                ]),
+                                const SizedBox(height: 12),
+                                ..._groupedContents(),
+                              ]),
+                  ),
+      ),
     );
   }
+
+  Widget _emptyState() => ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 100),
+          Icon(
+            _completedSomething
+                ? Icons.task_alt_rounded
+                : Icons.menu_book_outlined,
+            size: 72,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            _completedSomething
+                ? 'Estudo do dia concluído!'
+                : 'Nenhum conteúdo para estudar.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _completedSomething
+                ? 'Você concluiu todos os conteúdos planejados para esta sessão.'
+                : 'Adicione conteúdos ao ciclo de estudos para começar.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () => context.go('/study'),
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Voltar para Estudar'),
+          ),
+        ],
+      );
 
   List<Widget> _groupedContents() {
     final disciplines = <String, List<StudyContent>>{};
@@ -223,19 +386,39 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       for (final content in discipline.value) {
         topics.putIfAbsent(content.topicName, () => []).add(content);
       }
-      return Card(
+      final scheme = Theme.of(context).colorScheme;
+      return Container(
         margin: const EdgeInsets.only(bottom: 16),
         clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: scheme.primary.withValues(alpha: .06),
+          border: Border.all(color: scheme.primary.withValues(alpha: .48)),
+          borderRadius: BorderRadius.circular(22),
+        ),
         child: ExpansionTile(
           initiallyExpanded: true,
+          backgroundColor: scheme.primary.withValues(alpha: .12),
+          collapsedBackgroundColor: scheme.primary.withValues(alpha: .08),
           tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
           title: Row(children: [
-            const Icon(Icons.school_outlined, size: 22),
+            Icon(Icons.school_outlined, size: 24, color: scheme.primary),
             const SizedBox(width: 10),
             Expanded(
-                child: Text(discipline.key,
-                    style: const TextStyle(
-                        fontSize: 19, fontWeight: FontWeight.w900))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('DISCIPLINA',
+                      style: TextStyle(
+                          color: scheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1)),
+                  Text(discipline.key,
+                      style: const TextStyle(
+                          fontSize: 19, fontWeight: FontWeight.w900)),
+                ],
+              ),
+            ),
           ]),
           subtitle: Padding(
             padding: const EdgeInsets.only(left: 32),
@@ -250,6 +433,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                             .colorScheme
                             .surface
                             .withValues(alpha: .35),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(alpha: .7)),
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: ExpansionTile(
@@ -261,10 +449,24 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                               color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 10),
                           Expanded(
-                              child: Text(topic.key,
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800))),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('TÓPICO',
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: .9)),
+                                Text(topic.key,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800)),
+                              ],
+                            ),
+                          ),
                         ]),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(left: 30),
@@ -328,19 +530,34 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
             Wrap(spacing: 8, runSpacing: 8, children: [
               if (content.summary?.trim().isNotEmpty ?? false)
                 OutlinedButton.icon(
-                    onPressed: () => _showSummary(content),
+                    onPressed: () async {
+                      await _showSummary(content);
+                      if (mounted) {
+                        await _markPartCompleted(content, 'summaries');
+                      }
+                    },
                     icon: const Icon(Icons.notes_rounded),
                     label: const Text('Ver resumo')),
               if (content.flashcards.isNotEmpty)
                 OutlinedButton.icon(
-                    onPressed: () => _openFlashcards(content),
+                    onPressed: () async {
+                      await _openFlashcards(content);
+                      if (mounted) {
+                        await _markPartCompleted(content, 'flashcards');
+                      }
+                    },
                     icon: const Icon(Icons.style_rounded),
                     label: Text(
                         'Estudar flashcards (${content.flashcards.length})')),
               if (content.questions.isNotEmpty)
                 FilledButton.icon(
-                    onPressed: () =>
-                        context.push('/study-content?type=questions'),
+                    onPressed: () async {
+                      final completed = await context.push<bool>(
+                          '/study-content?type=questions&content_id=${content.id}');
+                      if (completed == true && mounted) {
+                        await _markPartCompleted(content, 'questions');
+                      }
+                    },
                     icon: const Icon(Icons.quiz_rounded),
                     label:
                         Text('Iniciar questões (${content.questions.length})')),

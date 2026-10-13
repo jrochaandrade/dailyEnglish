@@ -74,7 +74,8 @@ class _SectionBody extends StatelessWidget {
               .map((item) => Padding(
                     padding: const EdgeInsets.only(bottom: 7),
                     child: Text('• ${MarkdownText.plain(item)}',
-                        style: const TextStyle(height: 1.35)),
+                        textAlign: TextAlign.justify,
+                        style: const TextStyle(height: 1.5)),
                   ))
               .toList(),
         ),
@@ -90,7 +91,8 @@ class _SectionBody extends StatelessWidget {
                     .map((cell) => Padding(
                           padding: const EdgeInsets.all(9),
                           child: Text(MarkdownText.plain(cell),
-                              style: const TextStyle(height: 1.3)),
+                              textAlign: TextAlign.justify,
+                              style: const TextStyle(height: 1.4)),
                         ))
                     .toList(),
               ))
@@ -154,7 +156,7 @@ class _SectionBody extends StatelessWidget {
       children.add(Padding(
         padding: const EdgeInsets.only(bottom: 9),
         child: Text(MarkdownText.plain(line),
-            style: const TextStyle(height: 1.45)),
+            textAlign: TextAlign.justify, style: const TextStyle(height: 1.6)),
       ));
     }
     flushBullets();

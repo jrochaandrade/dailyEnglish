@@ -2,6 +2,9 @@ class StudyContent {
   final int id;
   final String status;
   final bool studyEnabled;
+  final int studyInterval;
+  final int studyRepetitions;
+  final DateTime? studyNextReviewAt;
   final String? title;
   final String? materialTitle;
   final String? disciplineName;
@@ -14,6 +17,9 @@ class StudyContent {
     required this.id,
     required this.status,
     this.studyEnabled = true,
+    this.studyInterval = 0,
+    this.studyRepetitions = 0,
+    this.studyNextReviewAt,
     this.title,
     this.materialTitle,
     this.disciplineName,
@@ -32,6 +38,10 @@ class StudyContent {
       id: json['id'] as int,
       status: json['status'] as String? ?? 'draft',
       studyEnabled: json['study_enabled'] as bool? ?? true,
+      studyInterval: (json['study_interval'] as num?)?.toInt() ?? 0,
+      studyRepetitions: (json['study_repetitions'] as num?)?.toInt() ?? 0,
+      studyNextReviewAt:
+          DateTime.tryParse(json['study_next_review_at'] as String? ?? ''),
       title: json['title'] as String?,
       materialTitle: material['title'] as String? ??
           material['original_filename'] as String?,

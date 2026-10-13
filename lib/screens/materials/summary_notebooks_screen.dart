@@ -68,7 +68,7 @@ class _SummaryNotebooksScreenState extends State<SummaryNotebooksScreen> {
                                     'Você ainda não criou um caderno de revisão.')))
                       ])
                     : ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        padding: const EdgeInsets.fromLTRB(10, 12, 10, 24),
                         children: [
                           Card(
                             child: Padding(
@@ -307,8 +307,9 @@ class _NotebookDetailScreenState extends State<_NotebookDetailScreen> {
                   const Text('O caderno ainda não possui conteúdo gerado.')
                 else
                   Card(
+                    margin: EdgeInsets.zero,
                     child: Padding(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.fromLTRB(22, 20, 22, 24),
                       child: NotebookContentView(markdown: _notebook.content!),
                     ),
                   ),

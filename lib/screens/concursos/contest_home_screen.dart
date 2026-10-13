@@ -75,7 +75,7 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
             icon: Icons.play_circle_fill_rounded,
             title: 'Estudar',
             description: 'Veja as revisões pendentes e escolha o conteúdo.',
-            onTap: () => context.push('/study'),
+            onTap: () => context.go('/study'),
           ),
           _AreaCard(
             icon: Icons.menu_book_rounded,

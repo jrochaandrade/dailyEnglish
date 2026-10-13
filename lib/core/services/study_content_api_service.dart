@@ -52,6 +52,59 @@ class StudyContentApiService {
       throw StudyContentApiException('request_failed_${response.statusCode}');
     }
   }
+
+  Future<void> completeStudyContent(int contentId, {int quality = 4}) async {
+    final preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('api_token');
+    if (token == null) throw const StudyContentApiException('auth_required');
+    final response = await http.post(
+      Uri.parse('$baseUrl/study-content/$contentId/complete'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'quality': quality}),
+    );
+    if (response.statusCode == 401) {
+      throw const StudyContentApiException('auth_required');
+    }
+    if (response.statusCode != 200) {
+      throw StudyContentApiException('request_failed_${response.statusCode}');
+    }
+  }
+
+  Future<void> submitQuestionAnswer({
+    required int generatedContentId,
+    required int itemIndex,
+    required String userAnswer,
+    String? answeredAt,
+  }) async {
+    final preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('api_token');
+    if (token == null) throw const StudyContentApiException('auth_required');
+    final response = await http.post(
+      Uri.parse('$baseUrl/study-responses'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'generated_content_id': generatedContentId,
+        'item_type': 'question',
+        'item_index': itemIndex,
+        'user_answer': userAnswer,
+        if (answeredAt != null) 'answered_at': answeredAt,
+      }),
+    );
+    if (response.statusCode == 401) {
+      throw const StudyContentApiException('auth_required');
+    }
+    if (response.statusCode != 201) {
+      throw StudyContentApiException('request_failed_${response.statusCode}');
+    }
+  }
 }
 
 class StudyContentApiException implements Exception {

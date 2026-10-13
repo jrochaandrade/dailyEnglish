@@ -647,6 +647,14 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
     }
   }
 
+  void _previousCard() {
+    if (_index <= 0 || _answering) return;
+    setState(() {
+      _index--;
+      _revealed = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -673,10 +681,26 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
       appBar: AppBar(
         title: Text('Revisão ${_index + 1}/${_cards.length}'),
         leading: const BackButton(),
+        actions: [
+          IconButton(
+            onPressed: _index > 0 && !_answering ? _previousCard : null,
+            tooltip: 'Flashcard anterior',
+            icon: const Icon(Icons.skip_previous_rounded),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _index > 0 && !_answering ? _previousCard : null,
+              icon: const Icon(Icons.arrow_upward_rounded),
+              label: const Text('Flashcard anterior'),
+            ),
+          ),
+          const SizedBox(height: 12),
           LinearProgressIndicator(
               value: (_index + 1) / _cards.length, color: AppTheme.secondary),
           const SizedBox(height: 24),
@@ -833,6 +857,7 @@ class _ContestCardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleText = _removeGeneratedCardMarker(text);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: SizedBox(
@@ -853,7 +878,7 @@ class _ContestCardFace extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
               const SizedBox(height: 14),
-              Text(text,
+              Text(visibleText,
                   style: GoogleFonts.nunito(
                       fontSize: 22, fontWeight: FontWeight.w900, height: 1.25)),
               if (note != null) ...[
@@ -876,3 +901,8 @@ class _ContestCardFace extends StatelessWidget {
     );
   }
 }
+
+String _removeGeneratedCardMarker(String value) => value
+    .replaceFirst(
+        RegExp(r'\s*(?:\r?\n)?Flashcard\s+\d+\s*$', caseSensitive: false), '')
+    .trim();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/database/app_database.dart';
+import '../../core/services/study_content_api_service.dart';
 
 class ReviewPlanScreen extends StatefulWidget {
   const ReviewPlanScreen({super.key});
@@ -28,12 +30,46 @@ class _ReviewPlanScreenState extends State<ReviewPlanScreen> {
       return (rows.first['total'] as int?) ?? 0;
     }
 
+    final studyContentCount = await _pendingStudyContentCount();
     return {
       'inglês': await count('words', 'next_review_at') +
           await count('phrases', 'next_review_at') +
           await count('phrasal_verbs', 'next_review_at'),
       'concursos': await count('contest_cards', 'next_review_at'),
+      'estudos': studyContentCount,
     };
+  }
+
+  Future<int> _pendingStudyContentCount() async {
+    try {
+      final contents = await StudyContentApiService().list();
+      final preferences = await SharedPreferences.getInstance();
+      final completedSessionIds =
+          (preferences.getStringList('study-session-all-v1-completed') ?? [])
+              .map(int.tryParse)
+              .whereType<int>()
+              .toSet();
+      return contents.where((content) {
+        final due = content.studyNextReviewAt == null ||
+            !content.studyNextReviewAt!.isAfter(DateTime.now());
+        if (due && content.studyInterval > 0) {
+          preferences.remove('study-content-progress-v1-${content.id}');
+        }
+        if (completedSessionIds.contains(content.id)) return false;
+        final completed = (preferences
+                    .getStringList('study-content-progress-v1-${content.id}') ??
+                [])
+            .toSet();
+        final available = <String>{
+          if (content.summary?.trim().isNotEmpty ?? false) 'summaries',
+          if (content.flashcards.isNotEmpty) 'flashcards',
+          if (content.questions.isNotEmpty) 'questions',
+        };
+        return available.isNotEmpty && !available.every(completed.contains);
+      }).length;
+    } on StudyContentApiException {
+      return 0;
+    }
   }
 
   @override
@@ -63,6 +99,8 @@ class _ReviewPlanScreenState extends State<ReviewPlanScreen> {
                     counts['concursos']!,
                     Icons.school_rounded,
                     () => context.push('/concursos/review?mode=due')),
+                _planCard(context, 'Estudar', counts['estudos']!,
+                    Icons.menu_book_rounded, () => context.push('/study')),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/review-settings'),

@@ -114,8 +114,19 @@ class _SyncScreenState extends State<SyncScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _ErrorState(message: _error!, onRetry: _refresh)
-              : _content(),
+              : _safeContent(),
     );
+  }
+
+  Widget _safeContent() {
+    try {
+      return _content();
+    } catch (error) {
+      return _ErrorState(
+        message: 'Não foi possível exibir a comparação: $error',
+        onRetry: _refresh,
+      );
+    }
   }
 
   Widget _content() {
@@ -188,8 +199,8 @@ class _SyncScreenState extends State<SyncScreen> {
   }
 
   List<_TableComparison> _comparison() {
-    final local = (_local?['tables'] as Map<String, dynamic>? ?? {});
-    final remote = (_remote?['tables'] as Map<String, dynamic>? ?? {});
+    final local = _tableMap(_local?['tables']);
+    final remote = _tableMap(_remote?['tables']);
     return _tables
         .map((table) {
           final localRows = _rows(local[table]);
@@ -211,8 +222,11 @@ class _SyncScreenState extends State<SyncScreen> {
         .toList();
   }
 
+  Map<String, dynamic> _tableMap(dynamic value) =>
+      value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+
   List<Map<String, dynamic>> _rows(dynamic value) =>
-      (value as List<dynamic>? ?? [])
+      (value is List ? value : const <dynamic>[])
           .whereType<Map>()
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
