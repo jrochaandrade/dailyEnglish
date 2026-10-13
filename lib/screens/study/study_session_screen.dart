@@ -651,7 +651,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       'deck': content.topicName,
       'source': source,
     }).query;
-    await context.push('/concursos/review?$query', extra: content);
+    await context.push('/concursos/review?$query');
   }
 
   Future<void> _showSummary(StudyContent content) => showDialog<void>(

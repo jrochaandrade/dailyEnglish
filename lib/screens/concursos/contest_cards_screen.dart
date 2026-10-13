@@ -12,8 +12,6 @@ import '../../models/contest_card.dart';
 import '../../providers/contest_card_provider.dart';
 import '../../core/services/summary_notebook_api_service.dart';
 import '../../models/summary_notebook.dart';
-import '../../models/study_content.dart';
-import '../../core/services/mind_map_viewer.dart';
 
 const _contestCardPrompt =
     '''Você é um especialista em preparação para concursos públicos.
@@ -500,14 +498,8 @@ class ContestReviewScreen extends ConsumerStatefulWidget {
   final String? deck;
   final String? source;
   final String mode;
-  final StudyContent? mindMapContent;
   const ContestReviewScreen(
-      {super.key,
-      this.subject,
-      this.deck,
-      this.source,
-      this.mode = 'due',
-      this.mindMapContent});
+      {super.key, this.subject, this.deck, this.source, this.mode = 'due'});
   @override
   ConsumerState<ContestReviewScreen> createState() =>
       _ContestReviewScreenState();
@@ -704,15 +696,6 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
       appBar: AppBar(
         title: Text('Revisão ${_index + 1}/${_cards.length}'),
         leading: const BackButton(),
-        actions: [
-          if (widget.mindMapContent != null)
-            IconButton(
-              tooltip: 'Abrir mapa mental',
-              onPressed: () =>
-                  MindMapViewer.open(context, widget.mindMapContent!),
-              icon: const Icon(Icons.account_tree_outlined),
-            ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

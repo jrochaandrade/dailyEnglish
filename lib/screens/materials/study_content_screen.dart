@@ -541,7 +541,6 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
             '_discipline': content.disciplineName ?? 'Concursos',
             '_topic': content.topicName,
             '_material': content.materialTitle ?? 'Material',
-            '_content': content,
           }))
       .toList();
 
@@ -563,7 +562,6 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
             '_discipline': content.disciplineName ?? 'Sem disciplina',
             '_topic': content.topicName,
             '_material': content.materialTitle ?? 'Material',
-            '_content': content,
           }))
       .toList();
 
@@ -650,25 +648,6 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
           onTap: () => setState(() => _flashcardMode = 'all'),
         ),
         const SizedBox(height: 24),
-        if (_contents.any((content) => content.hasMindMap)) ...[
-          Text('Mapas mentais',
-              style: GoogleFonts.nunito(
-                  fontSize: 17, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _contents
-                .where((content) => content.hasMindMap)
-                .map((content) => OutlinedButton.icon(
-                      onPressed: () => MindMapViewer.open(context, content),
-                      icon: const Icon(Icons.account_tree_outlined),
-                      label: Text(content.materialTitle ?? 'Mapa mental'),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 20),
-        ],
         SizedBox(
           height: 56,
           child: ElevatedButton.icon(
@@ -687,18 +666,10 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                     if (subjects.length == 1) query['subject'] = subjects.first;
                     if (decks.length == 1) query['deck'] = decks.first;
                     if (sources.length == 1) query['source'] = sources.first;
-                    final mappedContents = _contents
-                        .where((content) => content.hasMindMap)
-                        .toList();
-                    context.push(
-                      Uri(
-                        path: '/concursos/review',
-                        queryParameters: query,
-                      ).toString(),
-                      extra: mappedContents.length == 1
-                          ? mappedContents.first
-                          : null,
-                    );
+                    context.push(Uri(
+                      path: '/concursos/review',
+                      queryParameters: query,
+                    ).toString());
                   },
             icon: const Icon(Icons.play_arrow_rounded),
             label: Text('Começar estudo ($_selectedFlashcardCount)'),
@@ -798,17 +769,6 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              if ((question['_content'] as StudyContent).hasMindMap) ...[
-                OutlinedButton.icon(
-                  onPressed: () => MindMapViewer.open(
-                    context,
-                    question['_content'] as StudyContent,
-                  ),
-                  icon: const Icon(Icons.account_tree_outlined),
-                  label: const Text('Abrir mapa mental'),
-                ),
-                const SizedBox(height: 10),
-              ],
               Text('ENUNCIADO',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
