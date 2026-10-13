@@ -31,6 +31,8 @@ import '../../models/contest_card.dart';
 import '../../screens/start/start_screen.dart';
 import '../../screens/materials/materials_screen.dart';
 import '../../screens/materials/study_content_screen.dart';
+import '../../screens/study/review_settings_screen.dart';
+import '../../screens/study/review_plan_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/auth_gate.dart';
 
@@ -187,6 +189,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/study-log',
       builder: (context, state) => const StudyLogScreen(),
+    ),
+    GoRoute(
+      path: '/review-settings',
+      builder: (context, state) => const ReviewSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/review-plan',
+      builder: (context, state) => const ReviewPlanScreen(),
     ),
     GoRoute(
       path: '/sync',

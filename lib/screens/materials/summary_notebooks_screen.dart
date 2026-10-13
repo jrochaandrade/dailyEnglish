@@ -42,7 +42,7 @@ class _SummaryNotebooksScreenState extends State<SummaryNotebooksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus cadernos de resumo')),
+      appBar: AppBar(title: const Text('Cadernos de revisão')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -63,16 +63,53 @@ class _SummaryNotebooksScreenState extends State<SummaryNotebooksScreen> {
                         Padding(
                             padding: EdgeInsets.all(32),
                             child: Center(
-                                child:
-                                    Text('Você ainda não criou um caderno.')))
+                                child: Text(
+                                    'Você ainda não criou um caderno de revisão.')))
                       ])
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _notebooks.length,
-                        itemBuilder: (context, index) => _NotebookCard(
-                          notebook: _notebooks[index],
-                          onTap: () => _openNotebook(_notebooks[index]),
-                        ),
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        children: [
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(18),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 25,
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer,
+                                    child: Icon(Icons.auto_stories_rounded,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Revisão inteligente',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 17)),
+                                        SizedBox(height: 4),
+                                        Text(
+                                            'Regras, pontos essenciais e pegadinhas organizados para sua revisão.'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          ..._notebooks.map((notebook) => _NotebookCard(
+                                notebook: notebook,
+                                onTap: () => _openNotebook(notebook),
+                              )),
+                        ],
                       ),
       ),
     );

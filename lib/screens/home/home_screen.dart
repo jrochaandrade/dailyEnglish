@@ -19,6 +19,7 @@ import '../../screens/study/study_session_form.dart';
 enum _HomeMenuItem {
   categories,
   studyLog,
+  reviewSettings,
   exportBackup,
   importBackup,
   backupToDrive,
@@ -175,6 +176,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     context.push('/categories');
                                   case _HomeMenuItem.studyLog:
                                     context.push('/study-log');
+                                  case _HomeMenuItem.reviewSettings:
+                                    context.push('/review-settings');
                                   case _HomeMenuItem.exportBackup:
                                     ref
                                         .read(backupServiceProvider)
@@ -213,6 +216,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   child: ListTile(
                                     leading: Icon(Icons.school_rounded),
                                     title: Text('Study Log'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: _HomeMenuItem.reviewSettings,
+                                  child: ListTile(
+                                    leading: Icon(
+                                        Icons.notifications_active_rounded),
+                                    title: Text('Configurar revisões'),
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),

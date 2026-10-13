@@ -230,13 +230,13 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                       children: [
                         Row(children: [
                           const Expanded(
-                            child: Text('Caderno de resumo',
+                            child: Text('Caderno de revisão',
                                 style: TextStyle(fontWeight: FontWeight.w900)),
                           ),
                           TextButton.icon(
                             onPressed: () => context.push('/summary-notebooks'),
                             icon: const Icon(Icons.menu_book_outlined),
-                            label: const Text('Meus cadernos'),
+                            label: const Text('Cadernos de revisão'),
                           ),
                         ]),
                         DropdownButtonFormField<String>(
@@ -334,7 +334,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Novo caderno de resumo'),
+          title: const Text('Novo caderno de revisão'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
               controller: nameController,

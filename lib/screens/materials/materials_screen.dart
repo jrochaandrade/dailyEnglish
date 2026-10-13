@@ -244,6 +244,61 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     await _loadStructure();
   }
 
+  Future<void> _deleteDiscipline(StudyStructure discipline) async {
+    if (!await _confirm('Excluir a disciplina "${discipline.name}"?')) return;
+    await _structureApi.deleteDiscipline(discipline.id);
+    if (_selectedDisciplineId == discipline.id) {
+      _selectedDisciplineId = null;
+      _selectedTopicId = null;
+    }
+    await _refreshAll();
+  }
+
+  Future<void> _deleteTopic(StudyTopic topic) async {
+    if (!await _confirm('Excluir o tópico "${topic.name}"?')) return;
+    await _structureApi.deleteTopic(topic.id);
+    if (_selectedTopicId == topic.id) _selectedTopicId = null;
+    await _refreshAll();
+  }
+
+  Future<void> _moveTopic(StudyTopic topic) async {
+    final destinations =
+        _structure.where((item) => item.id != _selectedDisciplineId).toList();
+    if (destinations.isEmpty) return;
+    final disciplineId = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Mover tópico para'),
+        children: destinations
+            .map((discipline) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, discipline.id),
+                  child: Text(discipline.name),
+                ))
+            .toList(),
+      ),
+    );
+    if (disciplineId == null) return;
+    await _structureApi.moveTopic(topic.id, disciplineId);
+    await _refreshAll();
+  }
+
+  Future<bool> _confirm(String message) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          content: Text(message),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Excluir')),
+          ],
+        ),
+      ) ??
+      false;
+
   Widget _structureSection() {
     final selected = _structure
         .where((item) => item.id == _selectedDisciplineId)
@@ -297,7 +352,14 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                     _selectedDisciplineId = discipline.id;
                     _selectedTopicId = null;
                   }),
-                  onLongPress: () => _editDiscipline(discipline),
+                  menuItems: const ['edit', 'delete'],
+                  onMenu: (action) {
+                    if (action == 'edit') {
+                      _editDiscipline(discipline);
+                    } else {
+                      _deleteDiscipline(discipline);
+                    }
+                  },
                 )))
           else if (_selectedTopicId == null) ...[
             const SizedBox(height: 14),
@@ -317,7 +379,16 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                     icon: Icons.folder_rounded,
                     label: topic.name,
                     onTap: () => setState(() => _selectedTopicId = topic.id),
-                    onLongPress: () => _editTopic(topic),
+                    menuItems: const ['edit', 'move', 'delete'],
+                    onMenu: (action) {
+                      if (action == 'edit') {
+                        _editTopic(topic);
+                      } else if (action == 'move') {
+                        _moveTopic(topic);
+                      } else {
+                        _deleteTopic(topic);
+                      }
+                    },
                   ))),
           ],
           if (selectedTopic != null)
@@ -340,34 +411,54 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
         children: items
             .map((item) => GestureDetector(
                   onTap: item.onTap,
-                  onLongPress: item.onLongPress,
                   child: SizedBox(
                     width: 142,
                     child: Card(
                       margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(item.icon,
-                                color: AppTheme.secondary, size: 28),
-                            const SizedBox(height: 8),
-                            Text(item.label,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.nunito(
-                                    fontWeight: FontWeight.w900)),
-                            if (item.count != null)
-                              Text(item.count!,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant)),
-                          ],
+                      child: Stack(children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 28, 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(item.icon,
+                                  color: AppTheme.secondary, size: 28),
+                              const SizedBox(height: 8),
+                              Text(item.label,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.nunito(
+                                      fontWeight: FontWeight.w900)),
+                              if (item.count != null)
+                                Text(item.count!,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant)),
+                            ],
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          top: 0,
+                          right: -4,
+                          child: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert_rounded, size: 20),
+                            padding: EdgeInsets.zero,
+                            onSelected: item.onMenu,
+                            itemBuilder: (context) => item.menuItems
+                                .map((action) => PopupMenuItem<String>(
+                                      value: action,
+                                      child: Text(action == 'edit'
+                                          ? 'Editar'
+                                          : action == 'move'
+                                              ? 'Mover'
+                                              : 'Excluir'),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                      ]),
                     ),
                   ),
                 ))
@@ -540,13 +631,15 @@ class _FolderItem {
   final String label;
   final String? count;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final List<String> menuItems;
+  final ValueChanged<String> onMenu;
 
   const _FolderItem({
     required this.icon,
     required this.label,
     this.count,
     required this.onTap,
-    required this.onLongPress,
+    required this.menuItems,
+    required this.onMenu,
   });
 }

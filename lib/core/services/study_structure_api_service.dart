@@ -46,6 +46,9 @@ class StudyStructureApiService {
   Future<void> updateTopic(int id, String name) =>
       _send('PATCH', '/topics/$id', {'name': name});
 
+  Future<void> moveTopic(int id, int disciplineId) =>
+      _send('PATCH', '/topics/$id/move', {'discipline_id': '$disciplineId'});
+
   Future<void> deleteTopic(int id) => _send('DELETE', '/topics/$id', {});
 
   Future<void> _send(

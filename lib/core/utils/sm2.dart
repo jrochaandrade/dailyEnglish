@@ -12,7 +12,14 @@ class SM2Result {
   });
 }
 
-// SuperMemo SM-2 algorithm.
+/// Intervals used by the study reviews, in days.
+///
+/// The first interval is one day (24 hours). Keeping these milestones
+/// explicit makes the same progression available to English and Contest
+/// cards, regardless of the card's previous interval value.
+const spacedReviewIntervals = <int>[1, 3, 7, 14, 30, 60, 90];
+
+// Spaced repetition algorithm.
 // quality: 0–2 = Incorrect, 3 = Hard, 4 = Good, 5 = Easy
 SM2Result computeSM2({
   required int currentInterval,
@@ -20,23 +27,34 @@ SM2Result computeSM2({
   required int repetitions,
   required int quality,
 }) {
-  int newInterval;
-  int newRepetitions;
+  final currentMilestone = _milestoneIndex(currentInterval);
+  late final int newInterval;
+  late final int newRepetitions;
 
-  if (quality >= 3) {
-    if (repetitions == 0) {
-      newInterval = quality == 5 ? 3 : 1;
-    } else if (repetitions == 1) {
-      newInterval = quality == 5 ? 8 : 6;
-    } else {
-      final base = (currentInterval * easeFactor).round();
-      newInterval = quality == 5 ? (base * 1.3).round() : base;
-      if (newInterval < 1) newInterval = 1;
-    }
-    newRepetitions = repetitions + 1;
-  } else {
-    newInterval = 1;
+  if (quality < 3) {
+    // A failed recall comes back tomorrow and starts the progression again.
+    newInterval = spacedReviewIntervals.first;
     newRepetitions = 0;
+  } else {
+    newRepetitions = repetitions + 1;
+
+    switch (quality) {
+      case 3:
+        // Hard: repeat the current step instead of pushing the card forward.
+        newInterval =
+            currentInterval > 0 ? currentInterval : spacedReviewIntervals.first;
+      case 5:
+        // Easy: skip one step. This gives a meaningful benefit without
+        // jumping straight from the first review to a long period.
+        final nextIndex =
+            (currentMilestone + 2).clamp(0, spacedReviewIntervals.length - 1);
+        newInterval = spacedReviewIntervals[nextIndex];
+      default:
+        // Good: move to the next configured milestone.
+        final nextIndex =
+            (currentMilestone + 1).clamp(0, spacedReviewIntervals.length - 1);
+        newInterval = spacedReviewIntervals[nextIndex];
+    }
   }
 
   double newEaseFactor =
@@ -54,6 +72,16 @@ SM2Result computeSM2({
     repetitions: newRepetitions,
     nextReviewAt: nextReviewAt,
   );
+}
+
+int _milestoneIndex(int interval) {
+  if (interval <= 0) return -1;
+
+  for (var index = 0; index < spacedReviewIntervals.length; index++) {
+    if (interval < spacedReviewIntervals[index]) return index - 1;
+  }
+
+  return spacedReviewIntervals.length - 1;
 }
 
 String formatInterval(int days) {

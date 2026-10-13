@@ -47,6 +47,11 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
             onPressed: _logout,
             icon: const Icon(Icons.logout_rounded),
           ),
+          IconButton(
+            tooltip: 'Configurar revisões',
+            onPressed: () => context.push('/review-settings'),
+            icon: const Icon(Icons.notifications_active_outlined),
+          ),
         ],
       ),
       body: ListView(
@@ -89,6 +94,12 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
             title: 'Desempenho',
             description: 'Veja sua ofensiva, revisões e cartões difíceis.',
             onTap: () => context.push('/concursos/performance'),
+          ),
+          _AreaCard(
+            icon: Icons.calendar_today_rounded,
+            title: 'Plano de revisão',
+            description: 'Veja o que precisa ser revisado hoje.',
+            onTap: () => context.push('/review-plan'),
           ),
           _AreaCard(
             icon: Icons.sync_rounded,
