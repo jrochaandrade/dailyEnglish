@@ -76,6 +76,12 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
+      expansionTileTheme: const ExpansionTileThemeData(
+        shape: Border(),
+        collapsedShape: Border(),
+        tilePadding: EdgeInsets.symmetric(horizontal: 16),
+        childrenPadding: EdgeInsets.zero,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: _lightSurface,
@@ -164,6 +170,12 @@ class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      ),
+      expansionTileTheme: const ExpansionTileThemeData(
+        shape: Border(),
+        collapsedShape: Border(),
+        tilePadding: EdgeInsets.symmetric(horizontal: 16),
+        childrenPadding: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

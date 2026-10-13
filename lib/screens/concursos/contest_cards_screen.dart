@@ -493,9 +493,10 @@ class _ContestCardFormScreenState extends ConsumerState<ContestCardFormScreen> {
 class ContestReviewScreen extends ConsumerStatefulWidget {
   final String? subject;
   final String? deck;
+  final String? source;
   final String mode;
   const ContestReviewScreen(
-      {super.key, this.subject, this.deck, this.mode = 'due'});
+      {super.key, this.subject, this.deck, this.source, this.mode = 'due'});
   @override
   ConsumerState<ContestReviewScreen> createState() =>
       _ContestReviewScreenState();
@@ -583,8 +584,8 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
 
   Future<void> _load() async {
     final repository = ref.read(contestCardRepositoryProvider);
-    final all =
-        await repository.getAll(subject: widget.subject, deck: widget.deck);
+    final all = await repository.getAll(
+        subject: widget.subject, deck: widget.deck, source: widget.source);
     final cards = switch (widget.mode) {
       'all' => all,
       'difficult' => all.where((card) => card.easeFactor < 2.5).toList(),

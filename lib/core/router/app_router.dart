@@ -269,6 +269,7 @@ final appRouter = GoRouter(
         child: ContestReviewScreen(
           subject: state.uri.queryParameters['subject'],
           deck: state.uri.queryParameters['deck'],
+          source: state.uri.queryParameters['source'],
           mode: state.uri.queryParameters['mode'] ?? 'due',
         ),
       ),

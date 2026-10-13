@@ -5,7 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/study_content_api_service.dart';
+import '../../core/database/app_database.dart';
+import '../../core/utils/markdown_text.dart';
 import '../../models/study_content.dart';
+import '../../models/contest_card.dart';
+import '../../repositories/contest_card_repository.dart';
 
 class StudySessionScreen extends StatefulWidget {
   final String? type;
@@ -189,18 +193,61 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         topics.putIfAbsent(content.topicName, () => []).add(content);
       }
       return Card(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 16),
+        clipBehavior: Clip.antiAlias,
         child: ExpansionTile(
           initiallyExpanded: true,
-          title: Text(discipline.key,
-              style: const TextStyle(fontWeight: FontWeight.w900)),
-          subtitle: Text('${discipline.value.length} material(is)'),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          title: Row(children: [
+            const Icon(Icons.school_outlined, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(discipline.key,
+                    style: const TextStyle(
+                        fontSize: 19, fontWeight: FontWeight.w900))),
+          ]),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(left: 32),
+            child: Text('${discipline.value.length} material(is)'),
+          ),
           children: topics.entries
-              .map((topic) => ExpansionTile(
-                    title: Text(topic.key,
-                        style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text('${topic.value.length} material(is)'),
-                    children: topic.value.map(_itemCard).toList(),
+              .map((topic) => Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withValues(alpha: .35),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 2),
+                        title: Row(children: [
+                          Icon(Icons.folder_outlined,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(topic.key,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800))),
+                        ]),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(left: 30),
+                          child: Text('${topic.value.length} material(is)'),
+                        ),
+                        children: topic.value
+                            .map((content) => Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                                  child: _itemCard(content),
+                                ))
+                            .toList(),
+                      ),
+                    ),
                   ))
               .toList(),
         ),
@@ -209,17 +256,35 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   }
 
   Widget _itemCard(StudyContent content) => Card(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: EdgeInsets.zero,
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant)),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
+              const Icon(Icons.description_outlined, size: 20),
+              const SizedBox(width: 8),
               Expanded(
                   child: Text(
                       content.materialTitle ?? content.title ?? 'Conteúdo',
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w900))),
+              PopupMenuButton<String>(
+                tooltip: 'Opções do conteúdo',
+                onSelected: (value) =>
+                    value == 'remove' ? _removeFromCycle(content) : null,
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'remove',
+                    child: Text('Remover do ciclo de estudos'),
+                  ),
+                ],
+              ),
               Checkbox(
                   value: _completed.contains(content.id),
                   onChanged: (_) => _toggleComplete(content.id))
@@ -237,8 +302,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                     label: const Text('Ver resumo')),
               if (content.flashcards.isNotEmpty)
                 OutlinedButton.icon(
-                    onPressed: () => context.push(
-                        '/study-content?type=flashcards&content_id=${content.id}'),
+                    onPressed: () => _openFlashcards(content),
                     icon: const Icon(Icons.style_rounded),
                     label: Text(
                         'Estudar flashcards (${content.flashcards.length})')),
@@ -253,6 +317,52 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           ]),
         ),
       );
+
+  Future<void> _removeFromCycle(StudyContent content) async {
+    try {
+      await _api.setStudyEnabled(content.id, false);
+      if (!mounted) return;
+      setState(() {
+        _contents.removeWhere((item) => item.id == content.id);
+        _completed.remove(content.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Conteúdo removido do ciclo de estudos.')));
+    } on StudyContentApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Não foi possível alterar: ${error.code}')));
+      }
+    }
+  }
+
+  Future<void> _openFlashcards(StudyContent content) async {
+    final source = content.materialTitle ?? 'Material';
+    final repository = ContestCardRepository(AppDatabase().database);
+    final now = DateTime.now();
+    for (final flashcard in content.flashcards) {
+      final front = MarkdownText.plain(flashcard['question'] as String? ?? '');
+      final back = MarkdownText.plain(flashcard['answer'] as String? ?? '');
+      if (front.isEmpty || back.isEmpty) continue;
+      await repository.upsertGenerated(ContestCard(
+        subject: content.disciplineName ?? 'Concursos',
+        deck: content.topicName,
+        front: front,
+        back: back,
+        source: source,
+        createdAt: now,
+        updatedAt: now,
+      ));
+    }
+    if (!mounted) return;
+    final query = Uri(queryParameters: {
+      'mode': 'all',
+      'subject': content.disciplineName ?? 'Concursos',
+      'deck': content.topicName,
+      'source': source,
+    }).query;
+    await context.push('/concursos/review?$query');
+  }
 
   Future<void> _showSummary(StudyContent content) => showDialog<void>(
         context: context,

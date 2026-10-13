@@ -5,7 +5,11 @@ class ContestCardRepository {
   final Future<Database> _futureDb;
   const ContestCardRepository(this._futureDb);
 
-  Future<List<ContestCard>> getAll({String? subject, String? deck}) async {
+  Future<List<ContestCard>> getAll({
+    String? subject,
+    String? deck,
+    String? source,
+  }) async {
     final db = await _futureDb;
     final where = <String>[];
     final args = <Object?>[];
@@ -16,6 +20,10 @@ class ContestCardRepository {
     if (deck != null) {
       where.add('deck = ?');
       args.add(deck);
+    }
+    if (source != null) {
+      where.add('source = ?');
+      args.add(source);
     }
     final maps = await db.query(
       'contest_cards',

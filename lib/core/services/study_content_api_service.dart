@@ -31,6 +31,27 @@ class StudyContentApiService {
         .map((item) => StudyContent.fromJson(item as Map<String, dynamic>))
         .toList();
   }
+
+  Future<void> setStudyEnabled(int contentId, bool enabled) async {
+    final preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('api_token');
+    if (token == null) throw const StudyContentApiException('auth_required');
+    final response = await http.patch(
+      Uri.parse('$baseUrl/study-content/$contentId/study-cycle'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'study_enabled': enabled}),
+    );
+    if (response.statusCode == 401) {
+      throw const StudyContentApiException('auth_required');
+    }
+    if (response.statusCode != 200) {
+      throw StudyContentApiException('request_failed_${response.statusCode}');
+    }
+  }
 }
 
 class StudyContentApiException implements Exception {
