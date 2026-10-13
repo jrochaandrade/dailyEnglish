@@ -104,6 +104,32 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     await _save();
   }
 
+  Future<void> _resetTimer() async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Reiniciar cronômetro?'),
+            content: const Text(
+                'O tempo acumulado desta sessão será zerado. Os itens concluídos serão mantidos.'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar')),
+              FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Reiniciar')),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+    setState(() {
+      _elapsed = Duration.zero;
+      _startedAt = _paused ? null : DateTime.now();
+    });
+    await _save();
+  }
+
   Future<void> _finish() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -147,6 +173,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     };
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: [
+        IconButton(
+          onPressed: _resetTimer,
+          icon: const Icon(Icons.restart_alt_rounded),
+          tooltip: 'Reiniciar cronômetro',
+        ),
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Center(
