@@ -50,9 +50,12 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      final includeAll = widget.type == 'flashcards' ||
+          widget.type == 'questions' ||
+          widget.type == 'summaries';
       final contents = widget.type == 'flashcards'
           ? await const GeneratedFlashcardSyncService().sync()
-          : await _api.list(includeAll: widget.type == 'summaries');
+          : await _api.list(includeAll: includeAll);
       List<SummaryNotebook> notebooks = [];
       try {
         notebooks = await SummaryNotebookApiService().list();
@@ -68,8 +71,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
       if (!mounted) return;
       setState(() {
         _contents = contents
-            .where(
-                (content) => widget.type == 'summaries' || content.studyEnabled)
+            .where((content) => includeAll || content.studyEnabled)
             .where((content) =>
                 widget.contentId == null || content.id == widget.contentId)
             .toList();
@@ -283,7 +285,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
 
   String get _title => switch (widget.type) {
         'flashcards' => 'Flashcards',
-        'questions' => 'Perguntas',
+        'questions' => 'Questões',
         'summaries' => 'Resumos',
         _ => 'Conteúdos de estudo',
       };
@@ -710,7 +712,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
       children: [
         _questionFilters(context),
         const SizedBox(height: 14),
-        Text('Pergunta ${_studyIndex + 1} de ${questions.length}',
+        Text('Questão ${_studyIndex + 1} de ${questions.length}',
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 12),
@@ -757,7 +759,7 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
               const SizedBox(height: 6),
               Text(
                   MarkdownText.plain(
-                      question['question'] as String? ?? 'Pergunta'),
+                      question['question'] as String? ?? 'Questão'),
                   textAlign: TextAlign.justify,
                   style: GoogleFonts.nunito(
                       fontSize: 18, fontWeight: FontWeight.w800, height: 1.3)),

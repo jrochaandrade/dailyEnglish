@@ -91,7 +91,7 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
           ),
           _AreaCard(
             icon: Icons.quiz_rounded,
-            title: 'Perguntas',
+            title: 'Questões',
             description: 'Responda questões e confira o gabarito.',
             onTap: () => context.push('/study-content?type=questions'),
           ),

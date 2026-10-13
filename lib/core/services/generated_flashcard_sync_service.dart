@@ -14,7 +14,7 @@ class GeneratedFlashcardSyncService {
     final now = DateTime.now();
     final activeKeys = <String>{};
 
-    for (final content in contents.where((item) => item.studyEnabled)) {
+    for (final content in contents) {
       for (final flashcard in content.flashcards) {
         final front =
             MarkdownText.plain(flashcard['question'] as String? ?? '');
