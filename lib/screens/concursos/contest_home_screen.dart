@@ -72,6 +72,18 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
             onTap: () => context.push('/materials'),
           ),
           _AreaCard(
+            icon: Icons.play_circle_fill_rounded,
+            title: 'Estudar',
+            description: 'Veja as revisões pendentes e escolha o conteúdo.',
+            onTap: () => context.push('/study'),
+          ),
+          _AreaCard(
+            icon: Icons.menu_book_rounded,
+            title: 'Cadernos de revisão',
+            description: 'Retome seus cadernos organizados.',
+            onTap: () => context.push('/summary-notebooks'),
+          ),
+          _AreaCard(
             icon: Icons.style_rounded,
             title: 'Flashcards',
             description: 'Revise os cartões organizados por tópico.',

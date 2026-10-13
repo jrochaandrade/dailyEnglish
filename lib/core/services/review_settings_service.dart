@@ -11,7 +11,7 @@ class ReviewSettingsService {
   Future<ReviewSettings> load() async {
     final prefs = await SharedPreferences.getInstance();
     return ReviewSettings(
-      notificationsEnabled: prefs.getBool(_enabledKey) ?? true,
+      notificationsEnabled: prefs.getBool(_enabledKey) ?? false,
       notificationHour: prefs.getInt(_hourKey) ?? 9,
       notificationMinute: prefs.getInt(_minuteKey) ?? 0,
       reviewMode: prefs.getString(_modeKey) ?? 'due',

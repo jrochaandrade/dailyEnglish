@@ -33,6 +33,8 @@ import '../../screens/materials/materials_screen.dart';
 import '../../screens/materials/study_content_screen.dart';
 import '../../screens/study/review_settings_screen.dart';
 import '../../screens/study/review_plan_screen.dart';
+import '../../screens/study/study_hub_screen.dart';
+import '../../screens/study/study_session_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/auth_gate.dart';
 
@@ -222,7 +224,19 @@ final appRouter = GoRouter(
       builder: (context, state) => AuthGate(
         child: StudyContentScreen(
           type: state.uri.queryParameters['type'],
+          contentId:
+              int.tryParse(state.uri.queryParameters['content_id'] ?? ''),
         ),
+      ),
+    ),
+    GoRoute(
+      path: '/study',
+      builder: (context, state) => const AuthGate(child: StudyHubScreen()),
+    ),
+    GoRoute(
+      path: '/study/session',
+      builder: (context, state) => AuthGate(
+        child: StudySessionScreen(type: state.uri.queryParameters['type']),
       ),
     ),
     GoRoute(

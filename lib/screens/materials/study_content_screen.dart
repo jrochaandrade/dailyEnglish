@@ -13,8 +13,9 @@ import '../../core/services/summary_notebook_api_service.dart';
 
 class StudyContentScreen extends StatefulWidget {
   final String? type;
+  final int? contentId;
 
-  const StudyContentScreen({super.key, this.type});
+  const StudyContentScreen({super.key, this.type, this.contentId});
 
   @override
   State<StudyContentScreen> createState() => _StudyContentScreenState();
@@ -50,7 +51,11 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
           await ContestCardRepository(AppDatabase().database).getAll();
       if (!mounted) return;
       setState(() {
-        _contents = contents;
+        _contents = contents
+            .where((content) => content.studyEnabled)
+            .where((content) =>
+                widget.contentId == null || content.id == widget.contentId)
+            .toList();
         _localReviewCards = localCards;
         _message = null;
       });

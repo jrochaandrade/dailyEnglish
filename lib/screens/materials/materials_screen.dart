@@ -245,7 +245,9 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   }
 
   Future<void> _deleteDiscipline(StudyStructure discipline) async {
-    if (!await _confirm('Excluir a disciplina "${discipline.name}"?')) return;
+    if (!await _confirm(
+        'Excluir "${discipline.name}" e todos os tópicos, materiais e conteúdos dentro dela?'))
+      return;
     await _structureApi.deleteDiscipline(discipline.id);
     if (_selectedDisciplineId == discipline.id) {
       _selectedDisciplineId = null;
@@ -255,7 +257,9 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   }
 
   Future<void> _deleteTopic(StudyTopic topic) async {
-    if (!await _confirm('Excluir o tópico "${topic.name}"?')) return;
+    if (!await _confirm(
+        'Excluir "${topic.name}" e todos os materiais e conteúdos dentro dele?'))
+      return;
     await _structureApi.deleteTopic(topic.id);
     if (_selectedTopicId == topic.id) _selectedTopicId = null;
     await _refreshAll();

@@ -1,6 +1,7 @@
 class StudyContent {
   final int id;
   final String status;
+  final bool studyEnabled;
   final String? title;
   final String? materialTitle;
   final String? disciplineName;
@@ -12,6 +13,7 @@ class StudyContent {
   const StudyContent({
     required this.id,
     required this.status,
+    this.studyEnabled = true,
     this.title,
     this.materialTitle,
     this.disciplineName,
@@ -29,6 +31,7 @@ class StudyContent {
     return StudyContent(
       id: json['id'] as int,
       status: json['status'] as String? ?? 'draft',
+      studyEnabled: json['study_enabled'] as bool? ?? true,
       title: json['title'] as String?,
       materialTitle: material['title'] as String? ??
           material['original_filename'] as String?,

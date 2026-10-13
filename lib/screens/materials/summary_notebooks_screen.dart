@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/study_content_api_service.dart';
 import '../../core/services/summary_notebook_api_service.dart';
@@ -105,10 +106,20 @@ class _SummaryNotebooksScreenState extends State<SummaryNotebooksScreen> {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          ..._notebooks.map((notebook) => _NotebookCard(
-                                notebook: notebook,
-                                onTap: () => _openNotebook(notebook),
-                              )),
+                          GridView.extent(
+                            maxCrossAxisExtent: 220,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.95,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: _notebooks
+                                .map((notebook) => _NotebookCard(
+                                      notebook: notebook,
+                                      onTap: () => _openNotebook(notebook),
+                                    ))
+                                .toList(),
+                          ),
                         ],
                       ),
       ),
@@ -130,15 +141,67 @@ class _NotebookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: ListTile(
-          onTap: onTap,
-          leading: const CircleAvatar(child: Icon(Icons.menu_book_rounded)),
-          title: Text(notebook.name,
-              style: GoogleFonts.nunito(fontWeight: FontWeight.w900)),
-          subtitle: Text(
-              '${notebook.disciplineName ?? 'Todas as disciplinas'} · ${notebook.sourceContentIds.length} resumo(s)'),
-          trailing: const Icon(Icons.chevron_right_rounded),
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 42, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.menu_book_rounded,
+                        size: 42, color: Theme.of(context).colorScheme.primary),
+                    const Spacer(),
+                    Text(notebook.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.nunito(
+                            fontWeight: FontWeight.w900, fontSize: 16)),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${notebook.sourceContentIds.length} resumo(s)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 18,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 2,
+              right: 2,
+              child: PopupMenuButton<String>(
+                tooltip: 'Opções do caderno',
+                onSelected: (value) {
+                  if (value == 'open') onTap();
+                  if (value == 'settings') {
+                    context.push('/review-settings');
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'open', child: Text('Abrir caderno')),
+                  PopupMenuItem(
+                      value: 'settings', child: Text('Configurar revisão')),
+                ],
+              ),
+            ),
+          ],
         ),
       );
 }

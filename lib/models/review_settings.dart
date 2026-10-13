@@ -5,7 +5,7 @@ class ReviewSettings {
   final String reviewMode;
 
   const ReviewSettings({
-    this.notificationsEnabled = true,
+    this.notificationsEnabled = false,
     this.notificationHour = 9,
     this.notificationMinute = 0,
     this.reviewMode = 'due',
