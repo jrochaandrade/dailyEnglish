@@ -46,32 +46,37 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       final preferences = await SharedPreferences.getInstance();
       final started = preferences.getString('${_key}-started');
       final savedIds = preferences.getStringList('${_key}-completed') ?? [];
+      final completedIds = savedIds.map(int.tryParse).whereType<int>().toSet();
       final savedElapsed = preferences.getInt('${_key}-elapsed') ?? 0;
       final contents = await _api.list();
       final progress = <int, Set<String>>{};
+      final syncFailedIds = <int>{};
       for (final content in contents) {
         final due = content.studyNextReviewAt == null ||
             !content.studyNextReviewAt!.isAfter(DateTime.now());
         if (due && content.studyInterval > 0) {
           await preferences.remove(_progressKey(content.id));
+          completedIds.remove(content.id);
         }
         progress[content.id] =
             (preferences.getStringList(_progressKey(content.id)) ?? []).toSet();
         if (content.studyInterval == 0 &&
-            _isFullyCompleted(content, progress[content.id])) {
+            (completedIds.contains(content.id) ||
+                _isFullyCompleted(content, progress[content.id]))) {
           try {
             await _api.completeStudyContent(content.id);
           } on StudyContentApiException {
-            // Retry on the next refresh if the server is temporarily offline.
+            completedIds.remove(content.id);
+            syncFailedIds.add(content.id);
           }
         }
       }
       if (!mounted) return;
       final sessionContents = contents.where(_matchesType).toList();
-      final completedIds = savedIds.map(int.tryParse).whereType<int>().toSet();
       for (final content in sessionContents) {
         final parts = progress[content.id] ?? <String>{};
-        if (_isCompletedForSession(content, parts)) {
+        if (!syncFailedIds.contains(content.id) &&
+            _isCompletedForSession(content, parts)) {
           completedIds.add(content.id);
         }
       }
@@ -141,6 +146,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   }
 
   Future<void> _toggleComplete(int id) async {
+    if (!_completed.contains(id)) {
+      final content = _contents.where((item) => item.id == id).firstOrNull;
+      if (content == null || !await _syncCompletion(content)) return;
+    }
+
     setState(() {
       if (_completed.contains(id)) {
         _completed.remove(id);
@@ -161,6 +171,21 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       }
     });
     await _save();
+  }
+
+  Future<bool> _syncCompletion(StudyContent content) async {
+    try {
+      await _api.completeStudyContent(content.id);
+      return true;
+    } on StudyContentApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text('Não foi possível sincronizar a conclusão: ${error.code}'),
+        ));
+      }
+      return false;
+    }
   }
 
   String _progressKey(int contentId) => 'study-content-progress-v1-$contentId';
@@ -190,11 +215,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setStringList(_progressKey(content.id), parts.toList());
     if (_isFullyCompleted(content, parts)) {
-      try {
-        await _api.completeStudyContent(content.id);
-      } on StudyContentApiException {
-        // Keep the local progress; the next refresh can retry the server sync.
-      }
+      if (!await _syncCompletion(content)) return;
     }
     if (!mounted) return;
     setState(() {
@@ -254,6 +275,22 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       ),
     );
     if (confirmed != true) return;
+
+    final pendingContents = List<StudyContent>.from(_contents);
+    for (final content in pendingContents) {
+      if (!await _syncCompletion(content)) return;
+      if (!mounted) return;
+      setState(() {
+        _completed.add(content.id);
+        _completedSomething = true;
+        _contents.removeWhere((item) => item.id == content.id);
+        if (!_completedContents.any((item) => item.id == content.id)) {
+          _completedContents.add(content);
+        }
+      });
+      await _save();
+    }
+
     final preferences = await SharedPreferences.getInstance();
     for (final suffix in ['started', 'elapsed', 'paused', 'completed']) {
       await preferences.remove('${_key}-$suffix');
