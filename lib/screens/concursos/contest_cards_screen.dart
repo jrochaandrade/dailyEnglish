@@ -681,13 +681,6 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
       appBar: AppBar(
         title: Text('Revisão ${_index + 1}/${_cards.length}'),
         leading: const BackButton(),
-        actions: [
-          IconButton(
-            onPressed: _index > 0 && !_answering ? _previousCard : null,
-            tooltip: 'Flashcard anterior',
-            icon: const Icon(Icons.skip_previous_rounded),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

@@ -10,13 +10,13 @@ class StudyContentApiService {
 
   final String baseUrl;
 
-  Future<List<StudyContent>> list() async {
+  Future<List<StudyContent>> list({bool includeAll = false}) async {
     final preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('api_token');
     if (token == null) throw const StudyContentApiException('auth_required');
 
     final response = await http.get(
-      Uri.parse('$baseUrl/study-content'),
+      Uri.parse('$baseUrl/study-content${includeAll ? '?include_all=1' : ''}'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 401) {

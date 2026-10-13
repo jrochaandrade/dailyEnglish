@@ -43,7 +43,16 @@ class _SummaryNotebooksScreenState extends State<SummaryNotebooksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cadernos de revisão')),
+      appBar: AppBar(
+        title: const Text('Cadernos de revisão'),
+        actions: [
+          IconButton(
+            onPressed: _createNotebook,
+            tooltip: 'Novo caderno',
+            icon: const Icon(Icons.add_box_outlined),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -124,6 +133,105 @@ class _SummaryNotebooksScreenState extends State<SummaryNotebooksScreen> {
                       ),
       ),
     );
+  }
+
+  Future<void> _createNotebook() async {
+    try {
+      final contents = await StudyContentApiService().list(includeAll: true);
+      final available = contents
+          .where((content) => content.summary?.trim().isNotEmpty ?? false)
+          .toList();
+      if (!mounted) return;
+      final nameController = TextEditingController();
+      final selected = <int>{};
+      var includeVisual = false;
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Novo caderno de revisão'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration:
+                          const InputDecoration(labelText: 'Nome do caderno'),
+                    ),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: includeVisual,
+                      onChanged: (value) =>
+                          setDialogState(() => includeVisual = value),
+                      title: const Text('Incluir mapa visual'),
+                    ),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Selecione os resumos'),
+                    ),
+                    ...available.map((content) => CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: selected.contains(content.id),
+                          title: Text(content.materialTitle ?? 'Resumo'),
+                          subtitle:
+                              Text(content.disciplineName ?? 'Sem disciplina'),
+                          onChanged: (value) => setDialogState(() {
+                            value == true
+                                ? selected.add(content.id)
+                                : selected.remove(content.id);
+                          }),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar')),
+              FilledButton(
+                onPressed:
+                    selected.isEmpty || nameController.text.trim().isEmpty
+                        ? null
+                        : () => Navigator.pop(dialogContext, {
+                              'name': nameController.text.trim(),
+                              'ids': selected.toList(),
+                              'visual': includeVisual,
+                            }),
+                child: const Text('Criar com IA'),
+              ),
+            ],
+          ),
+        ),
+      );
+      nameController.dispose();
+      if (result == null || !mounted) return;
+      await _api.create(
+        name: result['name'] as String,
+        sourceContentIds: (result['ids'] as List<dynamic>).cast<int>(),
+        includeVisual: result['visual'] as bool,
+      );
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Caderno criado e melhorado pela IA.')));
+      }
+    } on StudyContentApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Não foi possível criar: ${error.code}')));
+      }
+    } on SummaryNotebookApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Não foi possível criar: ${error.code}')));
+      }
+    }
   }
 
   Future<void> _openNotebook(SummaryNotebook notebook) async {
@@ -220,7 +328,7 @@ class _NotebookDetailScreenState extends State<_NotebookDetailScreen> {
   bool _saving = false;
 
   Future<void> _addSummaries() async {
-    final contents = await StudyContentApiService().list();
+    final contents = await StudyContentApiService().list(includeAll: true);
     if (!mounted) return;
     final available = contents
         .where((content) => content.summary?.trim().isNotEmpty ?? false)
@@ -310,23 +418,11 @@ class _NotebookDetailScreenState extends State<_NotebookDetailScreen> {
                     margin: EdgeInsets.zero,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(22, 20, 22, 24),
-                      child: NotebookContentView(markdown: _notebook.content!),
+                      child: NotebookContentView(
+                          markdown: _notebook.content!,
+                          visual: _notebook.visual),
                     ),
                   ),
-                if ((_notebook.visual ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Card(
-                    child: ExpansionTile(
-                      title: const Text('Mapa visual'),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: SelectableText(_notebook.visual!),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
     );

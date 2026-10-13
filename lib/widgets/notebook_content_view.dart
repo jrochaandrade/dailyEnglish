@@ -3,30 +3,45 @@ import '../core/utils/markdown_text.dart';
 
 class NotebookContentView extends StatelessWidget {
   final String markdown;
-  const NotebookContentView({super.key, required this.markdown});
+  final String? visual;
+  const NotebookContentView({super.key, required this.markdown, this.visual});
 
   @override
   Widget build(BuildContext context) {
-    final sections = _sections(markdown);
-    return Column(
-      children: sections
-          .map((section) => Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ExpansionTile(
-                  initiallyExpanded: section.$1 == sections.first.$1,
-                  title: Text(section.$1,
-                      style: const TextStyle(fontWeight: FontWeight.w900)),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: _SectionBody(lines: section.$2),
-                    ),
-                  ],
-                ),
-              ))
-          .toList(),
-    );
+    final content = visual != null && visual!.trim().isNotEmpty
+        ? _removeVisualSection(markdown)
+        : markdown;
+    final sections = _sections(content)
+        .where((section) =>
+            visual == null || section.$1.trim().toLowerCase() != 'visual')
+        .toList();
+    final List<Widget> children = sections
+        .map((section) => Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ExpansionTile(
+                initiallyExpanded: section.$1 == sections.first.$1,
+                title: Text(section.$1,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: _SectionBody(lines: section.$2),
+                  ),
+                ],
+              ),
+            ))
+        .toList();
+    if (visual != null && visual!.trim().isNotEmpty) {
+      children.add(MermaidMindmapView(source: visual!));
+    }
+    return Column(children: children);
   }
+
+  String _removeVisualSection(String value) => value.replaceAll(
+        RegExp(r'(?:^|\n)#{1,3}\s*Visual\s*\n.*?(?=\n#{1,3}\s+|\z)',
+            caseSensitive: false),
+        '',
+      );
 
   List<(String, List<String>)> _sections(String value) {
     final result = <(String, List<String>)>[];
@@ -53,6 +68,169 @@ class NotebookContentView extends StatelessWidget {
         ? [('Resumo', value.split(RegExp(r'\r?\n')))]
         : result;
   }
+}
+
+class MermaidMindmapView extends StatelessWidget {
+  final String source;
+  const MermaidMindmapView({super.key, required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    final nodes = _parseMindmap(source);
+    if (nodes.isEmpty) {
+      return Card(
+        margin: const EdgeInsets.only(top: 12),
+        child: ExpansionTile(
+          title: const Text('Mapa visual'),
+          subtitle: const Text('Não foi possível desenhar este mapa'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SelectableText(source),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Mapa visual',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w900)),
+            const SizedBox(height: 14),
+            ...nodes.map((node) => _MindmapNode(node: node)),
+            const SizedBox(height: 4),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title:
+                  Text('Ver código Mermaid', style: theme.textTheme.bodySmall),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child:
+                      SelectableText(source, style: theme.textTheme.bodySmall),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MindmapNodeData {
+  final int depth;
+  final String label;
+  const _MindmapNodeData(this.depth, this.label);
+}
+
+class _MindmapNode extends StatelessWidget {
+  final _MindmapNodeData node;
+  const _MindmapNode({required this.node});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isRoot = node.depth == 0;
+    final left = (node.depth * 18).clamp(0, 180).toDouble();
+    return Padding(
+      padding: EdgeInsets.only(left: left, bottom: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isRoot
+              ? colors.primaryContainer
+              : colors.surfaceContainerHighest.withValues(alpha: .55),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: isRoot ? colors.primary : colors.outlineVariant),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+                isRoot
+                    ? Icons.account_tree_rounded
+                    : Icons.subdirectory_arrow_right_rounded,
+                size: 18,
+                color: isRoot ? colors.primary : colors.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(node.label,
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                      fontWeight: isRoot ? FontWeight.w900 : FontWeight.w600,
+                      height: 1.35)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+List<_MindmapNodeData> _parseMindmap(String value) {
+  var normalized = value.replaceAll('\r', '').trim();
+  normalized = normalized.replaceAll(
+      RegExp(r'```(?:mermaid)?', caseSensitive: false), '');
+  normalized = normalized.replaceAll('```', '').trim();
+  final lines = normalized.split('\n');
+  final start = lines.indexWhere((line) =>
+      RegExp(r'^(?:mermaid\s+)?mindmap(?:\s|$)', caseSensitive: false)
+          .hasMatch(line.trim()));
+  if (start < 0) return const [];
+
+  final result = <_MindmapNodeData>[];
+  final firstRemainder = lines[start].trim().replaceFirst(
+      RegExp(r'^(?:mermaid\s+)?mindmap\s*', caseSensitive: false), '');
+  final sourceLines = <String>[
+    if (firstRemainder.isNotEmpty) '  $firstRemainder',
+    ...lines.skip(start + 1),
+  ];
+  for (final raw in sourceLines) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) continue;
+    final indent = raw.length - raw.trimLeft().length;
+    final rootMatch = RegExp(
+            r'^root\s*(?:\(\((.*?)\)\)|\((.*?)\)|\[(.*?)\])\s*(.*)$',
+            caseSensitive: false)
+        .firstMatch(trimmed);
+    if (rootMatch != null) {
+      final rootLabel = [
+        rootMatch.group(1),
+        rootMatch.group(2),
+        rootMatch.group(3)
+      ]
+          .whereType<String>()
+          .firstWhere((item) => item.isNotEmpty, orElse: () => 'Tema')
+          .trim();
+      result.add(_MindmapNodeData(0, rootLabel));
+      final remainder = rootMatch.group(4)?.trim() ?? '';
+      if (remainder.isNotEmpty) {
+        result.add(_MindmapNodeData(1, remainder));
+      }
+      continue;
+    }
+    var label = trimmed;
+    label = label.replaceAll(RegExp(r'^\(\(|\)\)$'), '').trim();
+    label = label.replaceAll(RegExp(r'^\(|\)$'), '').trim();
+    label = label.replaceAll(RegExp(r'^\[|\]$'), '').trim();
+    label = label.replaceAll(RegExp(r'^"|"$'), '').trim();
+    if (label.isEmpty) continue;
+    final depth = result.isEmpty ? 0 : (indent ~/ 2).clamp(1, 8);
+    result.add(_MindmapNodeData(depth, label));
+  }
+  return result;
 }
 
 class _SectionBody extends StatelessWidget {
