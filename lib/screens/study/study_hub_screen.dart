@@ -6,7 +6,9 @@ import '../../core/theme/app_theme.dart';
 import '../../models/study_content.dart';
 
 class StudyHubScreen extends StatefulWidget {
-  const StudyHubScreen({super.key});
+  final bool returnToConcursos;
+
+  const StudyHubScreen({super.key, this.returnToConcursos = false});
 
   @override
   State<StudyHubScreen> createState() => _StudyHubScreenState();
@@ -23,22 +25,26 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(remote: false);
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool remote = false}) async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final contents = await _api.list();
+      List<StudyContent> contents;
+      if (remote) {
+        contents = await _api.list();
+      } else {
+        contents = await _api.cachedList();
+        if (contents.isEmpty) contents = await _api.list();
+      }
       final preferences = await SharedPreferences.getInstance();
       final completedParts = <int, Set<String>>{};
       for (final content in contents) {
-        final due = content.studyNextReviewAt == null ||
-            !content.studyNextReviewAt!.isAfter(DateTime.now());
-        if (due && content.studyInterval > 0) {
+        if (content.isDue && content.studyInterval > 0) {
           await preferences.remove(_progressKey(content.id));
         }
         completedParts[content.id] =
@@ -115,14 +121,17 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && context.mounted) context.go('/areas');
+        if (!didPop && context.mounted) {
+          context.go(widget.returnToConcursos ? '/concursos' : '/areas');
+        }
       },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Estudar'),
           leading: IconButton(
             tooltip: 'Voltar para áreas de estudo',
-            onPressed: () => context.go('/areas'),
+            onPressed: () =>
+                context.go(widget.returnToConcursos ? '/concursos' : '/areas'),
             icon: const Icon(Icons.arrow_back_rounded),
           ),
           actions: [
@@ -134,7 +143,7 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
           ],
         ),
         body: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: () => _load(remote: true),
           child: _loading
               ? ListView(children: const [
                   SizedBox(
@@ -229,8 +238,11 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
                         child: Center(child: Text('Nenhum material pendente.')),
                       )
                     else
-                      ..._contents
-                          .map((content) => _ContentTile(content: content)),
+                      ..._contents.map((content) => _ContentTile(
+                            content: content,
+                            onReturned: _load,
+                            returnToConcursos: widget.returnToConcursos,
+                          )),
                   ],
                 ),
         ),
@@ -257,7 +269,14 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
 
 class _ContentTile extends StatelessWidget {
   final StudyContent content;
-  const _ContentTile({required this.content});
+  final Future<void> Function() onReturned;
+  final bool returnToConcursos;
+
+  const _ContentTile({
+    required this.content,
+    required this.onReturned,
+    required this.returnToConcursos,
+  });
 
   @override
   Widget build(BuildContext context) => Card(
@@ -267,7 +286,12 @@ class _ContentTile extends StatelessWidget {
           subtitle: Text(
               '${content.disciplineName ?? 'Sem disciplina'} · ${content.topicName}'),
           trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () => context.push('/study/session'),
+          onTap: () async {
+            final returnQuery = returnToConcursos ? '&return=concursos' : '';
+            await context
+                .push('/study/session?content_id=${content.id}$returnQuery');
+            if (context.mounted) await onReturned();
+          },
         ),
       );
 }

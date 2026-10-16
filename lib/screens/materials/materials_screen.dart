@@ -29,10 +29,26 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   int? _selectedTopicId;
   String? _message;
 
+  void _handleBack() {
+    if (_selectedTopicId != null) {
+      setState(() => _selectedTopicId = null);
+      return;
+    }
+    if (_selectedDisciplineId != null) {
+      setState(() => _selectedDisciplineId = null);
+      return;
+    }
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/concursos');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _refreshAll();
+    _refreshAll(remote: false);
   }
 
   @override
@@ -41,7 +57,19 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadMaterials() async {
+  Future<void> _loadMaterials({bool remote = true}) async {
+    try {
+      final cached = await _api.cachedList();
+      if (mounted) {
+        setState(() {
+          _materials
+            ..clear()
+            ..addAll(cached);
+          _message = null;
+        });
+      }
+    } catch (_) {}
+    if (!remote) return;
     try {
       final materials = await _api.list();
       if (!mounted) return;
@@ -57,8 +85,16 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     }
   }
 
-  Future<void> _loadStructure() async {
+  Future<void> _loadStructure({bool remote = true}) async {
     setState(() => _loadingStructure = true);
+    try {
+      final cached = await _structureApi.cachedList();
+      if (mounted) setState(() => _structure = cached);
+    } catch (_) {}
+    if (!remote) {
+      if (mounted) setState(() => _loadingStructure = false);
+      return;
+    }
     try {
       final structure = await _structureApi.list();
       if (!mounted) return;
@@ -77,8 +113,11 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     }
   }
 
-  Future<void> _refreshAll() async {
-    await Future.wait([_loadStructure(), _loadMaterials()]);
+  Future<void> _refreshAll({bool remote = true}) async {
+    await Future.wait([
+      _loadStructure(remote: remote),
+      _loadMaterials(remote: remote),
+    ]);
   }
 
   Future<void> _pickFile() async {
@@ -475,155 +514,168 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Materiais'),
-        actions: [
-          IconButton(
-            tooltip: 'Atualizar do servidor',
-            onPressed: _refreshAll,
-            icon: const Icon(Icons.sync_rounded),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && mounted) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Materiais'),
+          leading: IconButton(
+            tooltip: 'Voltar',
+            onPressed: _handleBack,
+            icon: const Icon(Icons.arrow_back_rounded),
           ),
-          IconButton(
-            tooltip: 'Conteúdos gerados',
-            onPressed: () => context.push('/study-content'),
-            icon: const Icon(Icons.auto_awesome_rounded),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshAll,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            if (_selectedTopicId != null) ...[
-              Text(
-                'Envie o conteúdo que você quer estudar',
-                style: GoogleFonts.nunito(
-                    fontSize: 22, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Comece por PDFs. Depois vamos gerar resumo e flashcards com referência à fonte.',
-                style: GoogleFonts.nunito(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          actions: [
+            IconButton(
+              tooltip: 'Atualizar do servidor',
+              onPressed: _refreshAll,
+              icon: const Icon(Icons.sync_rounded),
+            ),
+            IconButton(
+              tooltip: 'Conteúdos gerados',
+              onPressed: () => context.push('/study-content'),
+              icon: const Icon(Icons.auto_awesome_rounded),
+            ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _refreshAll,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              if (_selectedTopicId != null) ...[
+                Text(
+                  'Envie o conteúdo que você quer estudar',
+                  style: GoogleFonts.nunito(
+                      fontSize: 22, fontWeight: FontWeight.w900),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
-            _structureSection(),
-            if (_selectedTopicId != null) ...[
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _titleController,
-                        decoration: const InputDecoration(
-                          labelText: 'Título do material',
-                          hintText: 'Ex.: Direito Constitucional',
+                const SizedBox(height: 6),
+                Text(
+                  'Comece por PDFs. Depois vamos gerar resumo e flashcards com referência à fonte.',
+                  style: GoogleFonts.nunito(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+              _structureSection(),
+              if (_selectedTopicId != null) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _titleController,
+                          decoration: const InputDecoration(
+                            labelText: 'Título do material',
+                            hintText: 'Ex.: Direito Constitucional',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      OutlinedButton.icon(
-                        onPressed: _loading ? null : _pickFile,
-                        icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: Text(_selectedFile == null
-                            ? 'Selecionar PDF'
-                            : 'Trocar PDF'),
-                      ),
-                      if (_selectedFile != null) ...[
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: _loading ? null : _pickFile,
+                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                          label: Text(_selectedFile == null
+                              ? 'Selecionar PDF'
+                              : 'Trocar PDF'),
+                        ),
+                        if (_selectedFile != null) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            _selectedFile!.path
+                                .split(Platform.pathSeparator)
+                                .last,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _loading ? null : _upload,
+                            icon: _loading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined),
+                            label: const Text('Enviar material'),
+                          ),
+                        ),
                         const SizedBox(height: 10),
-                        Text(
-                          _selectedFile!.path
-                              .split(Platform.pathSeparator)
-                              .last,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _loading ? null : _pasteContent,
+                            icon: const Icon(Icons.content_paste_rounded),
+                            label: const Text('Colar conteúdo de texto'),
+                          ),
                         ),
                       ],
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _loading ? null : _upload,
-                          icon: _loading
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.cloud_upload_outlined),
-                          label: const Text('Enviar material'),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _loading ? null : _pasteContent,
-                          icon: const Icon(Icons.content_paste_rounded),
-                          label: const Text('Colar conteúdo de texto'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_message != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: Text(
-                    _message!,
-                    style: GoogleFonts.nunito(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-              const SizedBox(height: 8),
-              Text(
-                'Seus materiais',
-                style: GoogleFonts.nunito(
-                    fontSize: 18, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              if (_materials.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 28),
-                  child: Center(child: Text('Nenhum material enviado ainda.')),
-                )
-              else
-                ..._materials.where((material) {
-                  if (_selectedDisciplineId != null &&
-                      material.disciplineId != _selectedDisciplineId) {
-                    return false;
-                  }
-                  if (_selectedTopicId != null &&
-                      material.topicId != _selectedTopicId) {
-                    return false;
-                  }
-                  return true;
-                }).map(
-                  (material) => Card(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.picture_as_pdf_rounded,
-                        color: AppTheme.secondary,
+                if (_message != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      _message!,
+                      style: GoogleFonts.nunito(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                      title: Text(material.title ?? material.originalFilename),
-                      subtitle: Text(
-                        '${material.originalFilename} · ${formatMaterialSize(material.sizeBytes)}',
-                      ),
-                      trailing: Text(material.status),
                     ),
                   ),
+                const SizedBox(height: 8),
+                Text(
+                  'Seus materiais',
+                  style: GoogleFonts.nunito(
+                      fontSize: 18, fontWeight: FontWeight.w900),
                 ),
+                const SizedBox(height: 8),
+                if (_materials.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 28),
+                    child:
+                        Center(child: Text('Nenhum material enviado ainda.')),
+                  )
+                else
+                  ..._materials.where((material) {
+                    if (_selectedDisciplineId != null &&
+                        material.disciplineId != _selectedDisciplineId) {
+                      return false;
+                    }
+                    if (_selectedTopicId != null &&
+                        material.topicId != _selectedTopicId) {
+                      return false;
+                    }
+                    return true;
+                  }).map(
+                    (material) => Card(
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.picture_as_pdf_rounded,
+                          color: AppTheme.secondary,
+                        ),
+                        title:
+                            Text(material.title ?? material.originalFilename),
+                        subtitle: Text(
+                          '${material.originalFilename} · ${formatMaterialSize(material.sizeBytes)}',
+                        ),
+                        trailing: Text(material.status),
+                      ),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

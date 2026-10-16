@@ -686,7 +686,8 @@ class _ContestReviewScreenState extends ConsumerState<ContestReviewScreen> {
             const Text('Muito bem!'),
             const SizedBox(height: 20),
             ElevatedButton(
-                onPressed: () => context.pop(), child: const Text('Voltar')),
+                onPressed: () => context.pop(true),
+                child: const Text('Voltar')),
           ]),
         ),
       );

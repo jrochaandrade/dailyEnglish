@@ -56,9 +56,7 @@ class _ReviewPlanScreenState extends State<ReviewPlanScreen> {
               .whereType<int>()
               .toSet();
       return contents.where((content) {
-        final due = content.studyNextReviewAt == null ||
-            !content.studyNextReviewAt!.isAfter(DateTime.now());
-        if (due && content.studyInterval > 0) {
+        if (content.isDue && content.studyInterval > 0) {
           preferences.remove('study-content-progress-v1-${content.id}');
         }
         if (completedSessionIds.contains(content.id)) return false;

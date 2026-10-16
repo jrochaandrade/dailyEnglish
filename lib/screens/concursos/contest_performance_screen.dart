@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/study_content_api_service.dart';
+import '../../core/services/offline_study_service.dart';
 import '../../models/contest_card.dart';
 import '../../models/study_content.dart';
 import '../../providers/contest_card_provider.dart';
@@ -26,13 +27,17 @@ class _ContestPerformanceScreenState
       _loadQuestionAnswers();
   late final Future<List<Map<String, dynamic>>> _flashcardReviewsFuture =
       _loadFlashcardReviews();
+  late final Future<List<Map<String, dynamic>>> _timeLogsFuture =
+      OfflineStudyService().loadTimeLogs();
 
   Future<List<Map<String, dynamic>>> _loadQuestionAnswers() async {
-    final preferences = await SharedPreferences.getInstance();
-    return (preferences.getStringList('question-performance-v1') ?? [])
-        .map((item) => jsonDecode(item))
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
+    final rows = await OfflineStudyService().loadResponses();
+    return rows
+        .where((item) => item['item_type'] == 'question')
+        .map((item) => {
+              'correct': item['is_correct'] == 1 || item['is_correct'] == true,
+              'answered_at': item['answered_at'],
+            })
         .toList();
   }
 
@@ -62,13 +67,20 @@ class _ContestPerformanceScreenState
             builder: (context, answersSnapshot) =>
                 FutureBuilder<List<Map<String, dynamic>>>(
               future: _flashcardReviewsFuture,
-              builder: (context, flashcardsSnapshot) => _PerformanceBody(
-                cards: items,
-                questionCount: snapshot.data?.fold<int>(0,
-                        (total, content) => total + content.questions.length) ??
-                    0,
-                questionAnswers: answersSnapshot.data ?? const [],
-                flashcardReviews: flashcardsSnapshot.data ?? const [],
+              builder: (context, flashcardsSnapshot) =>
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                future: _timeLogsFuture,
+                builder: (context, timeSnapshot) => _PerformanceBody(
+                  cards: items,
+                  questionCount: snapshot.data?.fold<int>(
+                          0,
+                          (total, content) =>
+                              total + content.questions.length) ??
+                      0,
+                  questionAnswers: answersSnapshot.data ?? const [],
+                  flashcardReviews: flashcardsSnapshot.data ?? const [],
+                  timeLogs: timeSnapshot.data ?? const [],
+                ),
               ),
             ),
           ),
@@ -83,11 +95,13 @@ class _PerformanceBody extends StatelessWidget {
   final int questionCount;
   final List<Map<String, dynamic>> questionAnswers;
   final List<Map<String, dynamic>> flashcardReviews;
+  final List<Map<String, dynamic>> timeLogs;
   const _PerformanceBody({
     required this.cards,
     required this.questionCount,
     required this.questionAnswers,
     required this.flashcardReviews,
+    required this.timeLogs,
   });
 
   @override
@@ -107,6 +121,11 @@ class _PerformanceBody extends StatelessWidget {
     final questionAccuracy = answeredQuestions == 0
         ? 0
         : ((correctQuestions / answeredQuestions) * 100).round();
+    final studyMinutes = timeLogs.fold<int>(
+            0,
+            (total, item) =>
+                total + ((item['duration_seconds'] as int?) ?? 0)) ~/
+        60;
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -159,6 +178,10 @@ class _PerformanceBody extends StatelessWidget {
                 label: 'Difíceis',
                 value: '$difficult',
                 icon: Icons.warning_amber_rounded),
+            _Metric(
+                label: 'Minutos estudados',
+                value: '$studyMinutes',
+                icon: Icons.timer_outlined),
           ],
         ),
         const SizedBox(height: 16),
@@ -180,6 +203,8 @@ class _PerformanceBody extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _FlashcardPerformance(reviews: flashcardReviews),
+        const SizedBox(height: 16),
+        _StudyTimePerformance(logs: timeLogs),
       ],
     );
   }
@@ -302,6 +327,77 @@ class _FlashcardPerformance extends StatelessWidget {
             _Legend(color: AppTheme.primary, label: 'Lembrados'),
             _Legend(color: Colors.redAccent, label: 'Para reforçar'),
           ]),
+        ]),
+      ),
+    );
+  }
+}
+
+class _StudyTimePerformance extends StatelessWidget {
+  final List<Map<String, dynamic>> logs;
+
+  const _StudyTimePerformance({required this.logs});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final daily = List.generate(14, (index) {
+      final day = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: 13 - index));
+      final seconds = logs.where((item) {
+        final date =
+            DateTime.tryParse(item['completed_at'] as String? ?? '')?.toLocal();
+        return date != null &&
+            date.year == day.year &&
+            date.month == day.month &&
+            date.day == day.day;
+      }).fold<int>(0,
+          (total, item) => total + ((item['duration_seconds'] as int?) ?? 0));
+      return seconds / 60;
+    });
+    final maxMinutes =
+        daily.fold<double>(1, (max, value) => value > max ? value : max);
+    final totalMinutes = logs.fold<int>(
+            0,
+            (total, item) =>
+                total + ((item['duration_seconds'] as int?) ?? 0)) ~/
+        60;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Tempo de estudo',
+              style: GoogleFonts.nunito(
+                  fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text('$totalMinutes minutos registrados · últimos 14 dias',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 120,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final minutes in daily)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FractionallySizedBox(
+                      heightFactor: minutes / maxMinutes,
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(4)),
+                        constraints: const BoxConstraints(minHeight: 2),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 8),
+          const _Legend(color: AppTheme.primary, label: 'Minutos ativos'),
         ]),
       ),
     );

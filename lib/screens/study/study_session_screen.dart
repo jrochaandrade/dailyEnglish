@@ -11,10 +11,19 @@ import '../../core/utils/markdown_text.dart';
 import '../../models/study_content.dart';
 import '../../models/contest_card.dart';
 import '../../repositories/contest_card_repository.dart';
+import '../../core/services/offline_study_service.dart';
 
 class StudySessionScreen extends StatefulWidget {
   final String? type;
-  const StudySessionScreen({super.key, this.type});
+  final int? contentId;
+  final bool returnToConcursos;
+
+  const StudySessionScreen({
+    super.key,
+    this.type,
+    this.contentId,
+    this.returnToConcursos = false,
+  });
 
   @override
   State<StudySessionScreen> createState() => _StudySessionScreenState();
@@ -34,28 +43,38 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   bool _loading = true;
   String? _error;
 
-  String get _key => 'study-session-${widget.type ?? 'all'}-v1';
+  String get _key =>
+      'study-session-${widget.type ?? 'all'}-${widget.contentId ?? 'all'}-v2';
+
+  String get _studyPath =>
+      widget.returnToConcursos ? '/study?return=concursos' : '/study';
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(remote: false);
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool remote = false}) async {
     try {
       final preferences = await SharedPreferences.getInstance();
-      final started = preferences.getString('${_key}-started');
       final savedIds = preferences.getStringList('${_key}-completed') ?? [];
       final completedIds = savedIds.map(int.tryParse).whereType<int>().toSet();
       final savedElapsed = preferences.getInt('${_key}-elapsed') ?? 0;
-      final contents = await _api.list();
+      List<StudyContent> fetchedContents =
+          remote ? await _api.list() : await _api.cachedList();
+      if (!remote && fetchedContents.isEmpty) {
+        fetchedContents = await _api.list();
+      }
+      final contents = widget.contentId == null
+          ? fetchedContents
+          : fetchedContents
+              .where((content) => content.id == widget.contentId)
+              .toList();
       final progress = <int, Set<String>>{};
       final syncFailedIds = <int>{};
       for (final content in contents) {
-        final due = content.studyNextReviewAt == null ||
-            !content.studyNextReviewAt!.isAfter(DateTime.now());
-        if (due && content.studyInterval > 0) {
+        if (content.isDue && content.studyInterval > 0) {
           await preferences.remove(_progressKey(content.id));
           completedIds.remove(content.id);
         }
@@ -98,9 +117,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           if (_isFullyCompleted(content)) _completed.add(content.id);
         }
         _elapsed = Duration(seconds: savedElapsed);
-        _startedAt =
-            started == null ? DateTime.now() : DateTime.tryParse(started);
-        _paused = preferences.getBool('${_key}-paused') ?? false;
+        // Leaving a session stores its elapsed time and pauses it. Opening it
+        // again starts counting immediately from the saved elapsed duration.
+        _elapsed = Duration(seconds: savedElapsed);
+        _startedAt = DateTime.now();
+        _paused = false;
         _loading = false;
       });
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -129,20 +150,27 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           ? DateTime.now().difference(_startedAt!)
           : Duration.zero);
 
-  Future<void> _save() async {
+  Future<void> _save({bool? paused}) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(
-        '${_key}-started', (_startedAt ?? DateTime.now()).toIso8601String());
-    await preferences.setInt('${_key}-elapsed', _currentElapsed.inSeconds);
-    await preferences.setBool('${_key}-paused', _paused);
+    final savePaused = paused ?? _paused;
+    final elapsed = _currentElapsed;
+    await preferences.setInt('${_key}-elapsed', elapsed.inSeconds);
+    await preferences.setBool('${_key}-paused', savePaused);
+    if (savePaused) {
+      await preferences.remove('${_key}-started');
+    } else {
+      await preferences.setString(
+          '${_key}-started', DateTime.now().toIso8601String());
+    }
     await preferences.setStringList(
         '${_key}-completed', _completed.map((id) => '$id').toList());
   }
 
   Future<void> _togglePause() async {
     if (!_paused && _startedAt != null) _elapsed = _currentElapsed;
-    _startedAt = _paused ? DateTime.now() : null;
-    setState(() => _paused = !_paused);
+    _paused = !_paused;
+    _startedAt = _paused ? null : DateTime.now();
+    setState(() {});
     await _save();
   }
 
@@ -192,6 +220,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   String _progressKey(int contentId) => 'study-content-progress-v1-$contentId';
 
   Set<String> _availableParts(StudyContent content) => {
+        if (content.hasMindMap) 'mind_map',
         if (content.summary?.trim().isNotEmpty ?? false) 'summaries',
         if (content.flashcards.isNotEmpty) 'flashcards',
         if (content.questions.isNotEmpty) 'questions',
@@ -277,6 +306,8 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     );
     if (confirmed != true) return;
 
+    final durationSeconds = _currentElapsed.inSeconds;
+
     final pendingContents = List<StudyContent>.from(_contents);
     for (final content in pendingContents) {
       if (!await _syncCompletion(content)) return;
@@ -292,17 +323,24 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       await _save();
     }
 
+    final offlineStudy = OfflineStudyService();
+    await offlineStudy.recordTimeLog(
+      generatedContentId: widget.contentId,
+      durationSeconds: durationSeconds,
+    );
+    await offlineStudy.syncPendingTimeLogs();
+
     final preferences = await SharedPreferences.getInstance();
     for (final suffix in ['started', 'elapsed', 'paused', 'completed']) {
       await preferences.remove('${_key}-$suffix');
     }
-    if (mounted) context.go('/study');
+    if (mounted) context.go(_studyPath);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _save();
+    _save(paused: true);
     super.dispose();
   }
 
@@ -318,13 +356,13 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && mounted) context.go('/study');
+        if (!didPop && mounted) context.go(_studyPath);
       },
       child: Scaffold(
         appBar: AppBar(
           title: Text(title),
           leading: IconButton(
-            onPressed: () => context.go('/study'),
+            onPressed: () => context.go(_studyPath),
             icon: const Icon(Icons.arrow_back_rounded),
             tooltip: 'Voltar para Estudar',
           ),
@@ -346,7 +384,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
             : _error != null
                 ? Center(child: Text('Não foi possível carregar: $_error'))
                 : RefreshIndicator(
-                    onRefresh: _load,
+                    onRefresh: () => _load(remote: true),
                     child: _contents.isEmpty
                         ? _emptyState()
                         : ListView(
@@ -404,7 +442,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: () => context.go('/study'),
+            onPressed: () => context.go(_studyPath),
             icon: const Icon(Icons.arrow_back_rounded),
             label: const Text('Voltar para Estudar'),
           ),
@@ -564,49 +602,117 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              if (content.hasMindMap)
-                OutlinedButton.icon(
-                    onPressed: () => MindMapViewer.open(context, content),
-                    icon: const Icon(Icons.account_tree_outlined),
-                    label: const Text('Abrir mapa mental')),
-              if (content.summary?.trim().isNotEmpty ?? false)
-                OutlinedButton.icon(
-                    onPressed: () async {
-                      await _showSummary(content);
-                      if (mounted) {
-                        await _markPartCompleted(content, 'summaries');
-                      }
-                    },
-                    icon: const Icon(Icons.notes_rounded),
-                    label: const Text('Ver resumo')),
-              if (content.flashcards.isNotEmpty)
-                OutlinedButton.icon(
-                    onPressed: () async {
-                      await _openFlashcards(content);
-                      if (mounted) {
-                        await _markPartCompleted(content, 'flashcards');
-                      }
-                    },
-                    icon: const Icon(Icons.style_rounded),
-                    label: Text(
-                        'Estudar flashcards (${content.flashcards.length})')),
-              if (content.questions.isNotEmpty)
-                FilledButton.icon(
-                    onPressed: () async {
-                      final completed = await context.push<bool>(
-                          '/study-content?type=questions&content_id=${content.id}');
-                      if (completed == true && mounted) {
-                        await _markPartCompleted(content, 'questions');
-                      }
-                    },
-                    icon: const Icon(Icons.quiz_rounded),
-                    label:
-                        Text('Iniciar questões (${content.questions.length})')),
-            ]),
+            LayoutBuilder(builder: (context, constraints) {
+              final buttonWidth = (constraints.maxWidth - 8) / 2;
+              return Wrap(spacing: 8, runSpacing: 8, children: [
+                if (content.hasMindMap)
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _partButton(
+                      content: content,
+                      part: 'mind_map',
+                      label: 'Mapa Mental',
+                      icon: Icons.account_tree_outlined,
+                      onPressed: () async {
+                        await MindMapViewer.open(context, content);
+                        if (mounted) {
+                          await _markPartCompleted(content, 'mind_map');
+                        }
+                      },
+                    ),
+                  ),
+                if (content.summary?.trim().isNotEmpty ?? false)
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _partButton(
+                      content: content,
+                      part: 'summaries',
+                      label: 'Resumo',
+                      icon: Icons.notes_rounded,
+                      onPressed: () async {
+                        await _showSummary(content);
+                        if (mounted) {
+                          await _markPartCompleted(content, 'summaries');
+                        }
+                      },
+                    ),
+                  ),
+                if (content.flashcards.isNotEmpty)
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _partButton(
+                      content: content,
+                      part: 'flashcards',
+                      label: 'Flashcards (${content.flashcards.length})',
+                      icon: Icons.style_rounded,
+                      onPressed: () async {
+                        final completed = await _openFlashcards(content);
+                        if (completed && mounted) {
+                          await _markPartCompleted(content, 'flashcards');
+                        }
+                      },
+                    ),
+                  ),
+                if (content.questions.isNotEmpty)
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _partButton(
+                      content: content,
+                      part: 'questions',
+                      label: 'Questões (${content.questions.length})',
+                      icon: Icons.quiz_rounded,
+                      onPressed: () async {
+                        final completed = await context.push<bool>(
+                            '/study-content?type=questions&content_id=${content.id}');
+                        if (completed == true && mounted) {
+                          await _markPartCompleted(content, 'questions');
+                        }
+                      },
+                    ),
+                  ),
+              ]);
+            }),
           ]),
         ),
       );
+
+  Widget _partButton({
+    required StudyContent content,
+    required String part,
+    required String label,
+    required IconData icon,
+    required Future<void> Function() onPressed,
+  }) {
+    final completed = _completedParts[content.id]?.contains(part) ?? false;
+    final scheme = Theme.of(context).colorScheme;
+    final buttonStyle = completed
+        ? FilledButton.styleFrom(
+            backgroundColor: Colors.green.shade600,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(48),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+          )
+        : OutlinedButton.styleFrom(
+            foregroundColor: scheme.primary,
+            side: BorderSide(color: scheme.primary.withValues(alpha: .7)),
+            minimumSize: const Size.fromHeight(48),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+          );
+
+    return completed
+        ? FilledButton.icon(
+            onPressed: () {},
+            style: buttonStyle,
+            icon: const Icon(Icons.check_rounded),
+            label: Text(label, overflow: TextOverflow.ellipsis),
+          )
+        : OutlinedButton.icon(
+            onPressed: onPressed,
+            style: buttonStyle,
+            icon: Icon(icon),
+            label: Text(label, overflow: TextOverflow.ellipsis),
+          );
+  }
 
   Future<void> _removeFromCycle(StudyContent content) async {
     try {
@@ -626,7 +732,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     }
   }
 
-  Future<void> _openFlashcards(StudyContent content) async {
+  Future<bool> _openFlashcards(StudyContent content) async {
     final source = content.materialTitle ?? 'Material';
     final repository = ContestCardRepository(AppDatabase().database);
     final now = DateTime.now();
@@ -644,14 +750,15 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         updatedAt: now,
       ));
     }
-    if (!mounted) return;
+    if (!mounted) return false;
     final query = Uri(queryParameters: {
       'mode': 'all',
       'subject': content.disciplineName ?? 'Concursos',
       'deck': content.topicName,
       'source': source,
     }).query;
-    await context.push('/concursos/review?$query');
+    final completed = await context.push<bool>('/concursos/review?$query');
+    return completed == true;
   }
 
   Future<void> _showSummary(StudyContent content) => showDialog<void>(

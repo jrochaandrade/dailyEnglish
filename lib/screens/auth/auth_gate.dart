@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/startup_sync_service.dart';
 
-class AuthLandingScreen extends StatelessWidget {
+class AuthLandingScreen extends StatefulWidget {
   const AuthLandingScreen({super.key});
+
+  @override
+  State<AuthLandingScreen> createState() => _AuthLandingScreenState();
+}
+
+class _AuthLandingScreenState extends State<AuthLandingScreen> {
+  bool _started = false;
 
   Future<bool> _hasToken() async {
     final preferences = await SharedPreferences.getInstance();
@@ -19,11 +27,17 @@ class AuthLandingScreen extends StatelessWidget {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            context.go(snapshot.data! ? '/areas' : '/login');
-          }
-        });
+        if (!_started) {
+          _started = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!context.mounted) return;
+            if (snapshot.data!) {
+              await StartupSyncService().run();
+            }
+            if (context.mounted)
+              context.go(snapshot.data! ? '/areas' : '/login');
+          });
+        }
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       },
     );

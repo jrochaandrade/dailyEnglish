@@ -231,12 +231,21 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/study',
-      builder: (context, state) => const AuthGate(child: StudyHubScreen()),
+      builder: (context, state) => AuthGate(
+        child: StudyHubScreen(
+          returnToConcursos: state.uri.queryParameters['return'] == 'concursos',
+        ),
+      ),
     ),
     GoRoute(
       path: '/study/session',
       builder: (context, state) => AuthGate(
-        child: StudySessionScreen(type: state.uri.queryParameters['type']),
+        child: StudySessionScreen(
+          type: state.uri.queryParameters['type'],
+          contentId:
+              int.tryParse(state.uri.queryParameters['content_id'] ?? ''),
+          returnToConcursos: state.uri.queryParameters['return'] == 'concursos',
+        ),
       ),
     ),
     GoRoute(

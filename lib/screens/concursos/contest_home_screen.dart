@@ -66,22 +66,16 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 24),
           _AreaCard(
-            icon: Icons.picture_as_pdf_rounded,
-            title: 'Materiais',
-            description: 'Inclua e acompanhe os PDFs enviados.',
-            onTap: () => context.push('/materials'),
-          ),
-          _AreaCard(
             icon: Icons.play_circle_fill_rounded,
             title: 'Estudar',
             description: 'Veja as revisões pendentes e escolha o conteúdo.',
-            onTap: () => context.go('/study'),
+            onTap: () => context.go('/study?return=concursos'),
           ),
           _AreaCard(
-            icon: Icons.menu_book_rounded,
-            title: 'Cadernos de revisão',
-            description: 'Retome seus cadernos organizados.',
-            onTap: () => context.push('/summary-notebooks'),
+            icon: Icons.calendar_today_rounded,
+            title: 'Plano de revisão',
+            description: 'Veja o que precisa ser revisado hoje.',
+            onTap: () => context.push('/review-plan'),
           ),
           _AreaCard(
             icon: Icons.style_rounded,
@@ -102,16 +96,22 @@ class _ContestHomeScreenState extends ConsumerState<ContestHomeScreen> {
             onTap: () => context.push('/study-content?type=summaries'),
           ),
           _AreaCard(
+            icon: Icons.menu_book_rounded,
+            title: 'Cadernos de revisão',
+            description: 'Retome seus cadernos organizados.',
+            onTap: () => context.push('/summary-notebooks'),
+          ),
+          _AreaCard(
+            icon: Icons.picture_as_pdf_rounded,
+            title: 'Materiais',
+            description: 'Inclua e acompanhe os PDFs enviados.',
+            onTap: () => context.push('/materials'),
+          ),
+          _AreaCard(
             icon: Icons.insights_rounded,
             title: 'Desempenho',
             description: 'Veja sua ofensiva, revisões e cartões difíceis.',
             onTap: () => context.push('/concursos/performance'),
-          ),
-          _AreaCard(
-            icon: Icons.calendar_today_rounded,
-            title: 'Plano de revisão',
-            description: 'Veja o que precisa ser revisado hoje.',
-            onTap: () => context.push('/review-plan'),
           ),
           _AreaCard(
             icon: Icons.sync_rounded,

@@ -66,6 +66,17 @@ class StudyContent {
     );
   }
 
+  bool get isDue {
+    final reviewAt = studyNextReviewAt;
+    if (reviewAt == null) return true;
+
+    final today = DateTime.now();
+    final reviewDate = DateTime(reviewAt.year, reviewAt.month, reviewAt.day);
+    final todayDate = DateTime(today.year, today.month, today.day);
+
+    return !reviewDate.isAfter(todayDate);
+  }
+
   static List<Map<String, dynamic>> _mapList(dynamic value) {
     if (value is! List) return const [];
     return value

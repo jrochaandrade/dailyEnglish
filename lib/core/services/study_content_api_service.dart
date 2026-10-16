@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/study_content.dart';
 import 'api_config.dart';
+import 'package:uuid/uuid.dart';
+import '../../core/database/app_database.dart';
 
 class StudyContentApiService {
   StudyContentApiService({String? baseUrl})
@@ -31,6 +33,17 @@ class StudyContentApiService {
     return (body['data'] as List<dynamic>? ?? [])
         .map((item) => StudyContent.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<List<StudyContent>> cachedList({bool includeAll = false}) async {
+    final db = await AppDatabase().database;
+    final rows = await db.query('study_contents', orderBy: 'updated_at DESC');
+    final contents = rows
+        .map((row) => StudyContent.fromJson(
+            jsonDecode(row['payload'] as String) as Map<String, dynamic>))
+        .toList();
+    if (includeAll) return contents;
+    return contents.where((content) => content.studyEnabled).toList();
   }
 
   Future<void> setStudyEnabled(int contentId, bool enabled) async {
@@ -102,6 +115,25 @@ class StudyContentApiService {
     required String userAnswer,
     String? answeredAt,
   }) async {
+    return submitResponse(
+      clientEventId: const Uuid().v4(),
+      generatedContentId: generatedContentId,
+      itemType: 'question',
+      itemIndex: itemIndex,
+      userAnswer: userAnswer,
+      answeredAt: answeredAt,
+    );
+  }
+
+  Future<QuestionAnswerResult> submitResponse({
+    required String clientEventId,
+    required int generatedContentId,
+    required String itemType,
+    required int itemIndex,
+    String? userAnswer,
+    String? selfEvaluation,
+    String? answeredAt,
+  }) async {
     final preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('api_token');
     if (token == null) throw const StudyContentApiException('auth_required');
@@ -113,17 +145,19 @@ class StudyContentApiService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
+        'client_event_id': clientEventId,
         'generated_content_id': generatedContentId,
-        'item_type': 'question',
+        'item_type': itemType,
         'item_index': itemIndex,
         'user_answer': userAnswer,
+        if (selfEvaluation != null) 'self_evaluation': selfEvaluation,
         if (answeredAt != null) 'answered_at': answeredAt,
       }),
     );
     if (response.statusCode == 401) {
       throw const StudyContentApiException('auth_required');
     }
-    if (response.statusCode != 201) {
+    if (response.statusCode != 200 && response.statusCode != 201) {
       throw StudyContentApiException('request_failed_${response.statusCode}');
     }
 
@@ -135,6 +169,40 @@ class StudyContentApiService {
       answer: data['answer'] as String? ?? '',
       explanation: data['explanation'] as String? ?? '',
     );
+  }
+
+  Future<void> submitTimeLog({
+    required String clientEventId,
+    int? generatedContentId,
+    required int durationSeconds,
+    String? startedAt,
+    String? endedAt,
+  }) async {
+    final preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('api_token');
+    if (token == null) throw const StudyContentApiException('auth_required');
+    final response = await http.post(
+      Uri.parse('$baseUrl/study-time-logs'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'client_event_id': clientEventId,
+        if (generatedContentId != null)
+          'generated_content_id': generatedContentId,
+        'duration_seconds': durationSeconds,
+        if (startedAt != null) 'started_at': startedAt,
+        if (endedAt != null) 'ended_at': endedAt,
+      }),
+    );
+    if (response.statusCode == 401) {
+      throw const StudyContentApiException('auth_required');
+    }
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw StudyContentApiException('request_failed_${response.statusCode}');
+    }
   }
 }
 

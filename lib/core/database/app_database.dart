@@ -20,7 +20,7 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'daily_english.db');
     return openDatabase(path,
-        version: 18, onCreate: _onCreate, onUpgrade: _onUpgrade);
+        version: 22, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -210,6 +210,10 @@ class AppDatabase {
         last_review_at TEXT
       )
     ''');
+
+    await _createStudyOfflineTables(db);
+    await _createCatalogCacheTables(db);
+    await _createStudyTimeTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -481,5 +485,80 @@ class AppDatabase {
             'ALTER TABLE contest_cards ADD COLUMN last_review_at TEXT');
       } catch (_) {}
     }
+    if (oldVersion < 19) {
+      await _createStudyOfflineTables(db);
+    }
+    if (oldVersion < 20) {
+      await _createCatalogCacheTables(db);
+    }
+    if (oldVersion < 21) {
+      await _createStudyTimeTable(db);
+    }
+    if (oldVersion < 22) {
+      try {
+        await db.execute(
+            'ALTER TABLE study_time_logs ADD COLUMN synced INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _createStudyOfflineTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS study_contents (
+        id INTEGER PRIMARY KEY,
+        payload TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS study_responses (
+        client_event_id TEXT PRIMARY KEY,
+        generated_content_id INTEGER NOT NULL,
+        item_type TEXT NOT NULL,
+        item_index INTEGER NOT NULL,
+        user_answer TEXT,
+        self_evaluation TEXT,
+        is_correct INTEGER,
+        answered_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS study_responses_pending_idx
+      ON study_responses (synced, answered_at)
+    ''');
+  }
+
+  Future<void> _createCatalogCacheTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS materials_cache (
+        id INTEGER PRIMARY KEY,
+        payload TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS study_structure_cache (
+        id INTEGER PRIMARY KEY,
+        payload TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _createStudyTimeTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS study_time_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        generated_content_id INTEGER,
+        duration_seconds INTEGER NOT NULL,
+        completed_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS study_time_logs_content_idx
+      ON study_time_logs (generated_content_id, completed_at)
+    ''');
   }
 }

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+import '../database/app_database.dart';
 import '../../models/material.dart';
 import 'api_config.dart';
 
@@ -19,20 +21,61 @@ class MaterialApiService {
   Future<List<StudyMaterial>> list() async {
     final token = await _token();
     if (token == null) throw const MaterialApiException('auth_required');
-    final response = await http.get(
-      Uri.parse('$baseUrl/materials'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 401) {
-      throw const MaterialApiException('auth_required');
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/materials'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+      if (response.statusCode == 401)
+        throw const MaterialApiException('auth_required');
+      if (response.statusCode != 200)
+        throw MaterialApiException('request_failed_${response.statusCode}');
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = body['data'] as List<dynamic>? ?? [];
+      await _cache(items
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList());
+      return items
+          .map((item) => StudyMaterial.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } on MaterialApiException {
+      rethrow;
+    } catch (_) {
+      return _cached();
     }
-    if (response.statusCode != 200) {
-      throw MaterialApiException('request_failed_${response.statusCode}');
-    }
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final items = body['data'] as List<dynamic>? ?? [];
-    return items
-        .map((item) => StudyMaterial.fromJson(item as Map<String, dynamic>))
+  }
+
+  Future<List<StudyMaterial>> cachedList() => _cached();
+
+  Future<void> _cache(List<Map<String, dynamic>> items) async {
+    final db = await AppDatabase().database;
+    await db.transaction((txn) async {
+      for (final item in items) {
+        final id = item['id'];
+        if (id is! int) continue;
+        await txn.insert(
+            'materials_cache',
+            {
+              'id': id,
+              'payload': jsonEncode(item),
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
+  Future<List<StudyMaterial>> _cached() async {
+    final db = await AppDatabase().database;
+    final rows = await db.query('materials_cache', orderBy: 'updated_at DESC');
+    if (rows.isEmpty) throw const MaterialApiException('offline_no_cache');
+    return rows
+        .map((row) => StudyMaterial.fromJson(
+            jsonDecode(row['payload'] as String) as Map<String, dynamic>))
         .toList();
   }
 

@@ -1,9 +1,9 @@
 import 'dart:convert';
+import '../../core/utils/question_answer.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/study_content_api_service.dart';
 import '../../core/database/app_database.dart';
 import '../../models/study_content.dart';
@@ -14,6 +14,7 @@ import '../../core/utils/markdown_text.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/summary_notebook_api_service.dart';
 import '../../core/services/generated_flashcard_sync_service.dart';
+import '../../core/services/offline_study_service.dart';
 import '../../core/services/mind_map_viewer.dart';
 
 class StudyContentScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class StudyContentScreen extends StatefulWidget {
 
 class _StudyContentScreenState extends State<StudyContentScreen> {
   final _api = StudyContentApiService();
+  final _offlineStudy = OfflineStudyService();
   List<StudyContent> _contents = [];
   List<SummaryNotebook> _notebooks = [];
   List<ContestCard> _localReviewCards = [];
@@ -36,10 +38,12 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   int _studyIndex = 0;
   String? _selectedAnswer;
   bool _questionAnswered = false;
+  bool _submittingAnswer = false;
   bool _questionAnswerRecorded = false;
   String? _correctAnswer;
   String? _answerExplanation;
   bool? _answerWasCorrect;
+  final Map<String, Map<String, dynamic>> _questionHistory = {};
   String _questionTopicFilter = '';
   String _questionDisciplineFilter = '';
   String _questionMaterialFilter = '';
@@ -48,25 +52,43 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(remote: false);
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool remote = false}) async {
     setState(() => _loading = true);
     try {
       final includeAll = widget.type == 'flashcards' ||
           widget.type == 'questions' ||
           widget.type == 'summaries';
-      final contents = widget.type == 'flashcards'
-          ? await const GeneratedFlashcardSyncService().sync()
-          : await _api.list(includeAll: includeAll);
-      List<SummaryNotebook> notebooks = [];
-      try {
-        notebooks = await SummaryNotebookApiService().list();
-      } on SummaryNotebookApiException {
-        // A falha ao carregar os cadernos não impede a leitura dos resumos.
+      List<StudyContent> contents;
+      if (remote) {
+        await _offlineStudy.syncPending();
+        contents = widget.type == 'flashcards'
+            ? await const GeneratedFlashcardSyncService().sync()
+            : await _api.list(includeAll: includeAll);
+        await _offlineStudy.cacheContents(
+            contents.map((content) => _contentJson(content)).toList());
+      } else {
+        contents = await _api.cachedList(includeAll: includeAll);
+        final cacheNeedsAnswers = widget.type == 'questions' &&
+            contents.any((content) => content.questions.any((question) =>
+                (question['answer'] as String? ?? '').trim().isEmpty));
+        if (contents.isEmpty || cacheNeedsAnswers) {
+          contents = await _api.list(includeAll: includeAll);
+          await _offlineStudy.cacheContents(
+              contents.map((content) => _contentJson(content)).toList());
+        }
       }
-      await _syncQuestionAnswers();
+      final questionHistory = await _loadQuestionHistory();
+      List<SummaryNotebook> notebooks = [];
+      if (remote) {
+        try {
+          notebooks = await SummaryNotebookApiService().list();
+        } on SummaryNotebookApiException {
+          // A falha ao carregar os cadernos não impede a leitura dos resumos.
+        }
+      }
       if (widget.type != 'flashcards') {
         await _syncFlashcardsForReview(contents);
       }
@@ -81,9 +103,34 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
             .toList();
         _notebooks = notebooks;
         _localReviewCards = localCards;
+        _questionHistory
+          ..clear()
+          ..addAll(questionHistory);
         _message = null;
       });
     } on StudyContentApiException catch (error) {
+      final questionHistory = await _loadQuestionHistory();
+      final db = await AppDatabase().database;
+      final cached =
+          await db.query('study_contents', orderBy: 'updated_at DESC');
+      if (cached.isNotEmpty) {
+        final contents = cached
+            .map((row) => StudyContent.fromJson(
+                jsonDecode(row['payload'] as String) as Map<String, dynamic>))
+            .where((content) =>
+                widget.contentId == null || content.id == widget.contentId)
+            .toList();
+        if (mounted) {
+          setState(() {
+            _contents = contents;
+            _questionHistory
+              ..clear()
+              ..addAll(questionHistory);
+            _message = 'Modo offline: usando o último conteúdo sincronizado.';
+          });
+        }
+        return;
+      }
       if (!mounted) return;
       setState(() => _message = error.code == 'auth_required'
           ? 'Faça login para acessar os conteúdos.'
@@ -93,91 +140,81 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
     }
   }
 
+  Map<String, dynamic> _contentJson(StudyContent content) => {
+        'id': content.id,
+        'status': content.status,
+        'study_enabled': content.studyEnabled,
+        'study_interval': content.studyInterval,
+        'study_repetitions': content.studyRepetitions,
+        'study_next_review_at': content.studyNextReviewAt?.toIso8601String(),
+        'title': content.title,
+        'summary': content.summary,
+        'flashcards': content.flashcards,
+        'questions': content.questions,
+        'material': {
+          'id': content.materialId,
+          'title': content.materialTitle,
+          'topic': {'name': content.topicName},
+          'discipline': {'name': content.disciplineName},
+        },
+      };
+
+  Future<Map<String, Map<String, dynamic>>> _loadQuestionHistory() async {
+    final rows = await _offlineStudy.loadResponses();
+    final history = <String, Map<String, dynamic>>{};
+    for (final row in rows) {
+      if (row['item_type'] != 'question') continue;
+      final contentId = row['generated_content_id'];
+      final itemIndex = row['item_index'];
+      if (contentId is int && itemIndex is int) {
+        history.putIfAbsent('$contentId:$itemIndex', () => row);
+      }
+    }
+    return history;
+  }
+
   Future<QuestionAnswerResult?> _recordQuestionAnswer(
       Map<String, dynamic> question) async {
     if (_questionAnswerRecorded) return null;
     _questionAnswerRecorded = true;
-    final preferences = await SharedPreferences.getInstance();
-    final saved = preferences.getStringList('question-performance-v1') ?? [];
+    final selectedAnswer = question['_selectedAnswer'] as String? ?? '';
+    final localCorrect = _questionIsCorrect(question, selectedAnswer);
+    final answeredAt = DateTime.now();
     final item = <String, dynamic>{
       'generated_content_id': question['_contentId'],
       'item_index': question['_index'],
-      'user_answer': question['_selectedAnswer'] ?? '',
-      'answered_at': DateTime.now().toIso8601String(),
-      'synced': false,
-      'discipline': question['_discipline'] ?? 'Sem disciplina',
-      'material': question['_material'] ?? 'Material',
+      'user_answer': selectedAnswer,
+      'answered_at': answeredAt.toIso8601String(),
     };
-    QuestionAnswerResult? result;
-    try {
-      result = await _api.submitQuestionAnswer(
-        generatedContentId: item['generated_content_id'] as int,
-        itemIndex: item['item_index'] as int,
-        userAnswer: item['user_answer'] as String,
-        answeredAt: item['answered_at'] as String,
-      );
-      item['correct'] = result.isCorrect;
-      item['synced'] = true;
-    } on StudyContentApiException {
-      _questionAnswerRecorded = false;
-    } catch (_) {
-      _questionAnswerRecorded = false;
-    }
-    saved.add(jsonEncode(item));
-    if (saved.length > 1000) saved.removeRange(0, saved.length - 1000);
-    await preferences.setStringList('question-performance-v1', saved);
-
-    return result;
+    await _offlineStudy.recordResponse(
+      generatedContentId: item['generated_content_id'] as int,
+      itemType: 'question',
+      itemIndex: item['item_index'] as int,
+      userAnswer: selectedAnswer,
+      isCorrect: localCorrect,
+      answeredAt: answeredAt,
+    );
+    _questionHistory[_questionKey(question)] = {
+      'generated_content_id': item['generated_content_id'],
+      'item_index': item['item_index'],
+      'user_answer': selectedAnswer,
+      'is_correct': localCorrect == null ? null : (localCorrect ? 1 : 0),
+      'answered_at': answeredAt.toIso8601String(),
+    };
+    if (localCorrect == null) return null;
+    return QuestionAnswerResult(
+        isCorrect: localCorrect,
+        answer: question['answer'] as String? ?? '',
+        explanation: question['explanation'] as String? ?? '');
   }
 
-  Future<void> _syncQuestionAnswers() async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = preferences.getStringList('question-performance-v1') ?? [];
-    var changed = false;
-    for (var index = 0; index < saved.length; index++) {
-      final decoded = jsonDecode(saved[index]);
-      if (decoded is! Map) continue;
-      final item = Map<String, dynamic>.from(decoded);
-      if (item['synced'] == true ||
-          item['generated_content_id'] is! int ||
-          item['item_index'] is! int) {
-        continue;
-      }
-      try {
-        final result = await _api.submitQuestionAnswer(
-          generatedContentId: item['generated_content_id'] as int,
-          itemIndex: item['item_index'] as int,
-          userAnswer: item['user_answer'] as String? ?? '',
-          answeredAt: item['answered_at'] as String?,
-        );
-        item['correct'] = result.isCorrect;
-        item['synced'] = true;
-        saved[index] = jsonEncode(item);
-        changed = true;
-      } on StudyContentApiException {
-        // Mantém a resposta na fila para sincronizar na próxima abertura.
-      } catch (_) {
-        // Falhas de rede não devem impedir o estudo offline.
-      }
-    }
-    if (changed)
-      await preferences.setStringList('question-performance-v1', saved);
-  }
+  bool? _questionIsCorrect(Map<String, dynamic> question, String answer) =>
+      (question['answer'] as String? ?? '').trim().isEmpty
+          ? null
+          : QuestionAnswer.isCorrect(question, answer);
 
-  bool _isCorrectQuestionOption(
-    Map<String, dynamic> option,
-    String answer,
-  ) {
-    final normalizedAnswer = answer.trim().toLowerCase();
-    final key = (option['key'] as String? ?? '').trim().toLowerCase();
-    final label = (option['label'] as String? ?? '').trim().toLowerCase();
-
-    return normalizedAnswer == key ||
-        normalizedAnswer == label ||
-        (key.isNotEmpty &&
-            RegExp('^${RegExp.escape(key)}(?:\\)|\\.|\\s|\$)')
-                .hasMatch(normalizedAnswer));
-  }
+  bool _isCorrectQuestionOption(Map<String, dynamic> option, String answer) =>
+      QuestionAnswer.matchesOption(option, answer);
 
   Future<void> _syncFlashcardsForReview(List<StudyContent> contents) async {
     final repository = ContestCardRepository(AppDatabase().database);
@@ -303,8 +340,20 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
             ? _questionsBody(context)
             : _summariesBody(context, groups);
     return Scaffold(
-      appBar: AppBar(title: Text(_title)),
-      body: RefreshIndicator(onRefresh: _load, child: content),
+      appBar: AppBar(
+        title: Text(_title),
+        actions: widget.type == 'questions'
+            ? [
+                IconButton(
+                  tooltip: 'Histórico de questões',
+                  icon: const Icon(Icons.history_rounded),
+                  onPressed: _showQuestionHistory,
+                ),
+              ]
+            : null,
+      ),
+      body: RefreshIndicator(
+          onRefresh: () => _load(remote: true), child: content),
     );
   }
 
@@ -714,6 +763,10 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
       );
     }
     final question = questions[_studyIndex.clamp(0, questions.length - 1)];
+    final history = _questionHistory[_questionKey(question)];
+    final historyCorrect = _historyIsCorrect(history);
+    final displayedSelectedAnswer = _selectedAnswer;
+    final displayedAnswered = _questionAnswered;
     final options = (question['options'] as List<dynamic>? ?? [])
         .whereType<Map>()
         .map((option) => Map<String, dynamic>.from(option))
@@ -724,8 +777,12 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
             {'key': 'Errado', 'label': 'Errado'},
           ]
         : options;
-    final answer =
-        (_correctAnswer ?? question['answer'] as String? ?? '').trim();
+    final answer = (_correctAnswer ??
+            history?['answer'] as String? ??
+            question['answer'] as String? ??
+            '')
+        .trim();
+    final hasAnswer = answer.isNotEmpty;
     return ListView(
       padding: const EdgeInsets.fromLTRB(10, 14, 10, 18),
       children: [
@@ -782,13 +839,41 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                   textAlign: TextAlign.justify,
                   style: GoogleFonts.nunito(
                       fontSize: 18, fontWeight: FontWeight.w800, height: 1.3)),
+              if (history != null && !_questionAnswered) ...[
+                const SizedBox(height: 12),
+                Text(
+                  historyCorrect == true
+                      ? 'Você acertou na última tentativa.'
+                      : historyCorrect == false
+                          ? 'Você errou na última tentativa.'
+                          : 'Última tentativa pendente de correção.',
+                  style: TextStyle(
+                    color: historyCorrect == true
+                        ? Colors.green
+                        : historyCorrect == false
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+              if (!hasAnswer) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Gabarito ainda não sincronizado. Atualize a tela antes de responder.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               ...normalizedOptions.map((option) {
                 final key = option['key'] as String? ?? '';
-                final isSelected = _selectedAnswer == key;
-                final isCorrect = _questionAnswered &&
+                final isSelected = displayedSelectedAnswer == key;
+                final isCorrect = displayedAnswered &&
                     _isCorrectQuestionOption(option, answer);
-                final isWrong = _questionAnswered && isSelected && !isCorrect;
+                final isWrong = displayedAnswered && isSelected && !isCorrect;
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
@@ -814,11 +899,11 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                   ),
                   child: RadioListTile<String>(
                     value: key,
-                    groupValue: _selectedAnswer,
+                    groupValue: displayedSelectedAnswer,
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                     visualDensity: VisualDensity.compact,
-                    onChanged: _questionAnswered
+                    onChanged: displayedAnswered || _submittingAnswer
                         ? null
                         : (value) => setState(() => _selectedAnswer = value),
                     title: Text(
@@ -832,46 +917,94 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton(
-                  onPressed: _selectedAnswer == null || _questionAnswered
+                  onPressed: !hasAnswer ||
+                          displayedSelectedAnswer == null ||
+                          displayedAnswered ||
+                          _submittingAnswer
                       ? null
                       : () async {
-                          question['_selectedAnswer'] = _selectedAnswer;
-                          final result = await _recordQuestionAnswer(question);
+                          final submittedAnswer = displayedSelectedAnswer;
+                          final submittedKey = _questionKey(question);
+                          question['_selectedAnswer'] = submittedAnswer;
+                          setState(() => _submittingAnswer = true);
+                          QuestionAnswerResult? result;
+                          try {
+                            result = await _recordQuestionAnswer(question);
+                          } catch (_) {
+                            _questionAnswerRecorded = false;
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Não foi possível salvar a resposta. Tente novamente.')),
+                              );
+                            }
+                            return;
+                          } finally {
+                            if (mounted)
+                              setState(() => _submittingAnswer = false);
+                          }
                           if (!context.mounted) return;
-                          if (result == null) {
+                          final currentQuestions = _filteredQuestions;
+                          if (currentQuestions.isEmpty ||
+                              _questionKey(currentQuestions[_studyIndex.clamp(
+                                      0, currentQuestions.length - 1)]) !=
+                                  submittedKey) return;
+                          setState(() {
+                            _selectedAnswer = submittedAnswer;
+                            _correctAnswer = result?.answer.isNotEmpty == true
+                                ? result!.answer
+                                : question['answer'] as String?;
+                            _answerExplanation = result?.explanation ??
+                                question['explanation'] as String?;
+                            _answerWasCorrect = result?.isCorrect ??
+                                _questionIsCorrect(question, submittedAnswer);
+                            _questionAnswered = true;
+                          });
+                          if (result == null && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                    'Resposta salva. O gabarito será exibido após sincronizar.'),
+                                    'Resposta salva offline e será sincronizada quando houver conexão.'),
                               ),
                             );
-                            return;
                           }
-                          setState(() {
-                            _correctAnswer = result.answer;
-                            _answerExplanation = result.explanation;
-                            _answerWasCorrect = result.isCorrect;
-                            _questionAnswered = true;
-                          });
                         },
                   child: const Text('Responder'),
                 ),
               ),
-              if (_questionAnswered) ...[
+              if (displayedAnswered) ...[
                 const SizedBox(height: 14),
                 Text(
-                    _answerWasCorrect == true
-                        ? 'Resposta correta! Gabarito: $answer'
-                        : 'Resposta incorreta. Gabarito: $answer',
+                    (_questionAnswered ? _answerWasCorrect : historyCorrect) ==
+                            null
+                        ? 'Resposta salva. Correção pendente de sincronização.'
+                        : (_questionAnswered
+                                    ? _answerWasCorrect
+                                    : historyCorrect) ==
+                                true
+                            ? 'Resposta correta! Gabarito: $answer'
+                            : 'Resposta incorreta. Gabarito: $answer',
                     style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: _answerWasCorrect == true
-                            ? Colors.green
-                            : Colors.red)),
-                if ((_answerExplanation ?? '').isNotEmpty)
+                        color: (_questionAnswered
+                                    ? _answerWasCorrect
+                                    : historyCorrect) ==
+                                null
+                            ? Colors.grey
+                            : (_questionAnswered
+                                        ? _answerWasCorrect
+                                        : historyCorrect) ==
+                                    true
+                                ? Colors.green
+                                : Colors.red)),
+                if ((_answerExplanation ??
+                        (history?['explanation'] as String? ?? ''))
+                    .isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: Text(MarkdownText.plain(_answerExplanation!)),
+                    child: Text(MarkdownText.plain(_answerExplanation ??
+                        (history?['explanation'] as String? ?? ''))),
                   ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -880,7 +1013,8 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
                     prompt: MarkdownText.plain(
                         question['question'] as String? ?? ''),
                     answer: answer,
-                    explanation: MarkdownText.plain(_answerExplanation ?? ''),
+                    explanation: MarkdownText.plain(_answerExplanation ??
+                        (history?['explanation'] as String? ?? '')),
                   ),
                   icon: const Icon(Icons.menu_book_outlined),
                   label: const Text('Adicionar ao caderno com IA'),
@@ -892,17 +1026,21 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           OutlinedButton.icon(
-              onPressed: _studyIndex == 0 ? null : _previousQuestion,
+              onPressed: _studyIndex == 0 || _submittingAnswer
+                  ? null
+                  : _previousQuestion,
               icon: const Icon(Icons.arrow_back_rounded),
               label: const Text('Anterior')),
           if (_studyIndex == questions.length - 1)
             FilledButton.icon(
-                onPressed: _questionAnswered ? _finishQuestions : null,
+                onPressed: (_questionAnswered || history != null)
+                    ? _finishQuestions
+                    : null,
                 icon: const Icon(Icons.check_rounded),
                 label: const Text('Concluir'))
           else
             FilledButton.icon(
-                onPressed: _nextQuestion,
+                onPressed: _submittingAnswer ? null : _nextQuestion,
                 icon: const Icon(Icons.arrow_forward_rounded),
                 label: const Text('Próxima')),
         ]),
@@ -1002,6 +1140,109 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
         ],
       );
 
+  String _questionKey(Map<String, dynamic> question) =>
+      '${question['_contentId']}:${question['_index']}';
+
+  bool? _historyIsCorrect(Map<String, dynamic>? history) {
+    final value = history?['is_correct'] ?? history?['correct'];
+    if (value == null) return null;
+    return value == true || value == 1 || value == '1';
+  }
+
+  Future<void> _showQuestionHistory() async {
+    final answered = _questions
+        .where(
+            (question) => _questionHistory.containsKey(_questionKey(question)))
+        .toList();
+    final correct = answered
+        .where((question) =>
+            _historyIsCorrect(_questionHistory[_questionKey(question)]) == true)
+        .length;
+    final wrong = answered
+        .where((question) =>
+            _historyIsCorrect(_questionHistory[_questionKey(question)]) ==
+            false)
+        .length;
+    final pending = answered.length - correct - wrong;
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * .82,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 12, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Histórico de questões',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w800)),
+                    ),
+                    IconButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        icon: const Icon(Icons.close_rounded)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                    '$correct acertos · $wrong erros · $pending pendentes'),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: answered.isEmpty
+                    ? const Center(
+                        child: Text('Você ainda não respondeu questões.'))
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: answered.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final question = answered[index];
+                          final isCorrect = _historyIsCorrect(
+                              _questionHistory[_questionKey(question)]);
+                          return ListTile(
+                            leading: Icon(
+                              isCorrect == null
+                                  ? Icons.schedule
+                                  : isCorrect
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                              color: isCorrect == null
+                                  ? Colors.grey
+                                  : isCorrect
+                                      ? Colors.green
+                                      : Colors.red,
+                            ),
+                            title: Text('Questão ${index + 1}'),
+                            subtitle: Text(
+                              MarkdownText.plain(
+                                  question['question'] as String? ?? ''),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Text(isCorrect == null
+                                ? 'Pendente'
+                                : isCorrect
+                                    ? 'Acerto'
+                                    : 'Erro'),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _nextQuestion() => setState(() {
         _studyIndex++;
         _resetQuestionAnswerState();
@@ -1022,7 +1263,16 @@ class _StudyContentScreenState extends State<StudyContentScreen> {
   }
 
   void _finishQuestions() {
-    if (!_questionAnswered || !context.canPop()) return;
+    final questions = _filteredQuestions;
+    final current = questions.isEmpty
+        ? null
+        : questions[_studyIndex.clamp(0, questions.length - 1)];
+    if ((!_questionAnswered || current == null) &&
+        (current == null ||
+            !_questionHistory.containsKey(_questionKey(current)))) {
+      return;
+    }
+    if (!context.canPop()) return;
     // O pop preserva a origem: sessão de estudos, área de questões ou concursos.
     context.pop(true);
   }

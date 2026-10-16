@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+import '../database/app_database.dart';
 import '../../models/study_structure.dart';
 import 'api_config.dart';
 
@@ -15,19 +17,64 @@ class StudyStructureApiService {
     final token = preferences.getString('api_token');
     if (token == null) throw const StudyStructureApiException('auth_required');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/study-structure'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 401) {
-      throw const StudyStructureApiException('auth_required');
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/study-structure'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+      if (response.statusCode == 401)
+        throw const StudyStructureApiException('auth_required');
+      if (response.statusCode != 200)
+        throw StudyStructureApiException(
+            'request_failed_${response.statusCode}');
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = body['data'] as List<dynamic>? ?? [];
+      await _cache(items
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList());
+      return items
+          .map((item) => StudyStructure.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } on StudyStructureApiException {
+      rethrow;
+    } catch (_) {
+      return _cached();
     }
-    if (response.statusCode != 200) {
-      throw StudyStructureApiException('request_failed_${response.statusCode}');
-    }
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return (body['data'] as List<dynamic>? ?? [])
-        .map((item) => StudyStructure.fromJson(item as Map<String, dynamic>))
+  }
+
+  Future<List<StudyStructure>> cachedList() => _cached();
+
+  Future<void> _cache(List<Map<String, dynamic>> items) async {
+    final db = await AppDatabase().database;
+    await db.transaction((txn) async {
+      for (final item in items) {
+        final id = item['id'];
+        if (id is! int) continue;
+        await txn.insert(
+            'study_structure_cache',
+            {
+              'id': id,
+              'payload': jsonEncode(item),
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
+  Future<List<StudyStructure>> _cached() async {
+    final db = await AppDatabase().database;
+    final rows =
+        await db.query('study_structure_cache', orderBy: 'updated_at DESC');
+    if (rows.isEmpty)
+      throw const StudyStructureApiException('offline_no_cache');
+    return rows
+        .map((row) => StudyStructure.fromJson(
+            jsonDecode(row['payload'] as String) as Map<String, dynamic>))
         .toList();
   }
 
